@@ -31,7 +31,13 @@ async function checkOfficialPSPlusFeed() {
     });
     
     const xmlDoc = parser.parse(xmlData);
-    const items = xmlDoc.rss.channel.item;
+    const items = xmlDoc?.rss?.channel?.item;
+
+    if (!items) {
+      console.warn("Aborting: RSS feed is missing expected items structure.");
+      return;
+    }
+
     const itemList = Array.isArray(items) ? items : [items];
     
     let posts = [];
