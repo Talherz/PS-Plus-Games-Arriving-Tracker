@@ -1,0 +1,26 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "An automated, serverless Node.js bot that natively parses the Official PlayStation Blog RSS feed to detect new \"Monthly Essential\" and \"Game Catalog\" announcements, extracts the specific games using regex strategies, and delivers formatted lists directly to a Discord server.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Talherz/PS-Plus-Games-Arriving-Tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Talherz/PS-Plus-Games-Arriving-Tracker/issues"
+  },
+  "homepage": "https://github.com/Talherz/PS-Plus-Games-Arriving-Tracker#readme",
+  "dependencies": {
+    "benchmark": "^2.1.4",
+    "fast-xml-parser": "^5.8.0",
+    "microtime": "^3.1.1"
+  }
+}
