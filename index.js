@@ -1,15 +1,17 @@
-const fs = require('fs');
-const { XMLParser } = require('fast-xml-parser');
+const fs = require("fs");
+const { XMLParser } = require("fast-xml-parser");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 if (!WEBHOOK_URL) {
-  console.error("FATAL ERROR: No Discord Webhook URL provided in environment variables.");
+  console.error(
+    "FATAL ERROR: No Discord Webhook URL provided in environment variables.",
+  );
   process.exit(1);
 }
 
-const STATE_FILE = 'saved_state.json';
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const STATE_FILE = "saved_state.json";
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function checkOfficialPSPlusFeed() {
   try {
@@ -27,7 +29,7 @@ async function checkOfficialPSPlusFeed() {
     const xmlData = await response.text();
     const parser = new XMLParser({
       ignoreAttributes: false,
-      textNodeName: "text"
+      textNodeName: "text",
     });
 
     const xmlDoc = parser.parse(xmlData);
@@ -37,12 +39,17 @@ async function checkOfficialPSPlusFeed() {
     let posts = [];
     for (let i = 0; i < itemList.length; i++) {
       let item = itemList[i];
-      let guidStr = (item.guid && item.guid.text) ? item.guid.text : (typeof item.guid === 'string' ? item.guid : item.link);
+      let guidStr =
+        item.guid && item.guid.text
+          ? item.guid.text
+          : typeof item.guid === "string"
+            ? item.guid
+            : item.link;
       posts.push({
         title: item.title,
         link: item.link,
         guid: guidStr,
-        content: item['content:encoded'] || item.description || ""
+        content: item["content:encoded"] || item.description || "",
       });
     }
 
@@ -51,7 +58,14 @@ async function checkOfficialPSPlusFeed() {
     // Load Memory State
     let state = { LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" };
     if (fs.existsSync(STATE_FILE)) {
-      state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      try {
+        state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+      } catch (e) {
+        console.error(
+          "Error parsing STATE_FILE, using default state:",
+          e.message,
+        );
+      }
     }
 
     let foundEssential = false;
@@ -94,36 +108,36 @@ async function checkOfficialPSPlusFeed() {
       fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
       console.log("Memory state updated.");
     } else {
-      console.log("No new posts detected or updates required. State unchanged.");
+      console.log(
+        "No new posts detected or updates required. State unchanged.",
+      );
     }
-
   } catch (error) {
     console.error("Execution error: ", error);
     process.exit(1);
   }
 }
 
-function decodeHtmlEntities(text) {
-  return String(text)
-    .replace(/&#8211;/g, '-')
-    .replace(/&#8212;/g, '-')
-    .replace(/&#8217;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&nbsp;/g, ' ');
-}
-
 function extractGameList(htmlBlock, fallbackTitle = "") {
   let extractedGames = [];
 
-  let decodedHtml = decodeHtmlEntities(htmlBlock);
+  let decodedHtml = String(htmlBlock)
+    .replace(/&#8211;/g, "-")
+    .replace(/&#8212;/g, "-")
+    .replace(/&#8217;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ");
 
-  let textWithNewlines = decodedHtml.replace(/<\/?(p|br|li|h[1-6]|div)[^>]*>/gi, '\n');
-  let cleanText = textWithNewlines.replace(/<[^>]*>?/gm, '');
-  let lines = cleanText.split('\n');
+  let textWithNewlines = decodedHtml.replace(
+    /<\/?(p|br|li|h[1-6]|div)[^>]*>/gi,
+    "\n",
+  );
+  let cleanText = textWithNewlines.replace(/<[^>]*>?/gm, "");
+  let lines = cleanText.split("\n");
 
   function isolateGameString(rawLine) {
     let splitLine = rawLine.split(/\.\s/)[0].trim();
-    if (splitLine.endsWith('.')) splitLine = splitLine.slice(0, -1);
+    if (splitLine.endsWith(".")) splitLine = splitLine.slice(0, -1);
     return splitLine;
   }
 
@@ -141,18 +155,29 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
     const listRegex = /<li>(.*?)<\/li>/g;
     let match;
     while ((match = listRegex.exec(decodedHtml)) !== null) {
-      let rawText = match[1].replace(/<[^>]*>?/gm, '').trim();
+      let rawText = match[1].replace(/<[^>]*>?/gm, "").trim();
       let gameString = isolateGameString(rawText);
 
-      if (gameString.length > 2 && gameString.length < 80 && !String(gameString).toLowerCase().includes("last chance") && !extractedGames.includes(gameString)) {
+      if (
+        gameString.length > 2 &&
+        gameString.length < 80 &&
+        !String(gameString).toLowerCase().includes("last chance") &&
+        !extractedGames.includes(gameString)
+      ) {
         extractedGames.push(gameString);
       }
     }
   }
 
   if (extractedGames.length === 0 && fallbackTitle.includes(":")) {
-    let cleanTitle = decodeHtmlEntities(fallbackTitle);
-    let titleString = cleanTitle.split(":")[1].replace(/and more/i, "").trim();
+    let cleanTitle = fallbackTitle
+      .replace(/&#8211;/g, "-")
+      .replace(/&#8217;/g, "'")
+      .replace(/&amp;/g, "&");
+    let titleString = cleanTitle
+      .split(":")[1]
+      .replace(/and more/i, "")
+      .trim();
     let rawGames = titleString.split(/,(?![^()]*\))|\s+and\s+/i);
     for (let i = 0; i < rawGames.length; i++) {
       let gameName = rawGames[i].trim();
@@ -166,7 +191,8 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
 }
 
 function formatListText(gameArray) {
-  if (gameArray.length === 0) return "> *None detected or formatting changed.*\n";
+  if (gameArray.length === 0)
+    return "> *None detected or formatting changed.*\n";
   let listText = "";
   for (let i = 0; i < gameArray.length; i++) {
     let gameStr = gameArray[i];
@@ -175,9 +201,9 @@ function formatListText(gameArray) {
       let splitIndex = gameStr.indexOf("|");
       let title = gameStr.substring(0, splitIndex).trim();
       let consoles = gameStr.substring(splitIndex).trim();
-      listText += (i + 1) + ". **" + title + "** " + consoles + "\n";
+      listText += i + 1 + ". **" + title + "** " + consoles + "\n";
     } else {
-      listText += (i + 1) + ". **" + gameStr + "**\n";
+      listText += i + 1 + ". **" + gameStr + "**\n";
     }
   }
   return listText;
@@ -190,19 +216,28 @@ async function processBlogContent(post, type) {
 
   if (type === "Catalog") {
     embedColor = 3447003;
-    let safeHtml = post.content.replace(/Extra and Premium/ig, "Extra_And_Premium");
-    safeHtml = safeHtml.replace(/Extra & Premium/ig, "Extra_And_Premium");
+    let safeHtml = post.content.replace(
+      /Extra and Premium/gi,
+      "Extra_And_Premium",
+    );
+    safeHtml = safeHtml.replace(/Extra & Premium/gi, "Extra_And_Premium");
 
     let blocks = safeHtml.split(/<h[1-4][^>]*>[^<]*Premium[^<]*<\/h[1-4]>/i);
     if (blocks.length === 1) {
-      blocks = safeHtml.split(/<p>\s*<strong>[^<]*Premium[^<]*<\/strong>\s*<\/p>/i);
+      blocks = safeHtml.split(
+        /<p>\s*<strong>[^<]*Premium[^<]*<\/strong>\s*<\/p>/i,
+      );
     }
 
     if (blocks.length === 1) {
       let splitIndex = safeHtml.indexOf("PlayStation Plus Premium", 800);
-      if (splitIndex === -1) splitIndex = safeHtml.indexOf("Premium | Classics", 800);
+      if (splitIndex === -1)
+        splitIndex = safeHtml.indexOf("Premium | Classics", 800);
       if (splitIndex !== -1) {
-        blocks = [safeHtml.substring(0, splitIndex), safeHtml.substring(splitIndex)];
+        blocks = [
+          safeHtml.substring(0, splitIndex),
+          safeHtml.substring(splitIndex),
+        ];
       }
     }
 
@@ -221,32 +256,36 @@ async function processBlogContent(post, type) {
   } else {
     embedColor = 16766720;
     let essentialGames = extractGameList(post.content, post.title);
-    messageContent = "@everyone 🚨 **New PS Plus Essential Games Announced!**\n\n";
-    messageContent += "🟨 **MONTHLY GAMES:**\n" + formatListText(essentialGames);
+    messageContent =
+      "@everyone 🚨 **New PS Plus Essential Games Announced!**\n\n";
+    messageContent +=
+      "🟨 **MONTHLY GAMES:**\n" + formatListText(essentialGames);
     tierText = "Click the blog link for full details.";
   }
 
   let imageUrl = "";
-  const imgMatch = post.content.match(/src="(https:\/\/[^"]+\.(?:jpg|png|jpeg|webp)[^"]*)"/i);
+  const imgMatch = post.content.match(
+    /src="(https:\/\/[^"]+\.(?:jpg|png|jpeg|webp)[^"]*)"/i,
+  );
   if (imgMatch) imageUrl = imgMatch[1];
 
   const embedData = {
-    "title": post.title,
-    "url": post.link,
-    "description": tierText,
-    "color": embedColor,
-    "footer": { "text": "Official PlayStation Blog Auto-Parse" },
-    "timestamp": new Date().toISOString()
+    title: post.title,
+    url: post.link,
+    description: tierText,
+    color: embedColor,
+    footer: { text: "Official PlayStation Blog Auto-Parse" },
+    timestamp: new Date().toISOString(),
   };
 
   if (imageUrl) {
-    embedData.image = { "url": imageUrl };
+    embedData.image = { url: imageUrl };
   }
 
   const payload = {
-    "username": "Talherz Waifu",
-    "content": messageContent,
-    "embeds": [embedData]
+    username: "Talherz Waifu",
+    content: messageContent,
+    embeds: [embedData],
   };
 
   console.log(`Attempting to send alert to Discord for: ${post.title}`);
@@ -255,7 +294,7 @@ async function processBlogContent(post, type) {
     const res = await fetch(WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     if (res.ok) {
@@ -266,10 +305,14 @@ async function processBlogContent(post, type) {
     if (res.status === 429) {
       const retryAfter = Number(res.headers.get("Retry-After") || 2);
       if (retryAfter > 250) {
-        console.error(`❌ Discord rate limit is too long (${retryAfter}s). Aborting attempt.`);
+        console.error(
+          `❌ Discord rate limit is too long (${retryAfter}s). Aborting attempt.`,
+        );
         return false;
       }
-      console.warn(`⚠️ Rate limited. Retry after ${retryAfter}s (attempt ${attempt}/3)`);
+      console.warn(
+        `⚠️ Rate limited. Retry after ${retryAfter}s (attempt ${attempt}/3)`,
+      );
       await sleep(retryAfter * 1000);
       continue;
     }
