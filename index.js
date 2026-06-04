@@ -118,15 +118,19 @@ async function checkOfficialPSPlusFeed() {
   }
 }
 
-function extractGameList(htmlBlock, fallbackTitle = "") {
-  let extractedGames = [];
-
-  let decodedHtml = String(htmlBlock)
+function decodeHtmlEntities(text) {
+  return String(text)
     .replace(/&#8211;/g, "-")
     .replace(/&#8212;/g, "-")
     .replace(/&#8217;/g, "'")
     .replace(/&amp;/g, "&")
     .replace(/&nbsp;/g, " ");
+}
+
+function extractGameList(htmlBlock, fallbackTitle = "") {
+  let extractedGames = [];
+
+  let decodedHtml = decodeHtmlEntities(htmlBlock);
 
   let textWithNewlines = decodedHtml.replace(
     /<\/?(p|br|li|h[1-6]|div)[^>]*>/gi,
@@ -170,10 +174,7 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
   }
 
   if (extractedGames.length === 0 && fallbackTitle.includes(":")) {
-    let cleanTitle = fallbackTitle
-      .replace(/&#8211;/g, "-")
-      .replace(/&#8217;/g, "'")
-      .replace(/&amp;/g, "&");
+    let cleanTitle = decodeHtmlEntities(fallbackTitle);
     let titleString = cleanTitle
       .split(":")[1]
       .replace(/and more/i, "")
