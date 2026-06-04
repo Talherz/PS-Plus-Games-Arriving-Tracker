@@ -19,7 +19,11 @@ async function checkOfficialPSPlusFeed() {
     const rssUrl = `https://blog.playstation.com/category/ps-plus/feed/?cb=${cacheBuster}`;
 
     console.log("Fetching native RSS directly from PlayStation...");
-    const response = await fetch(rssUrl);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(rssUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error(`Aborting: PS Blog returned error ${response.status}`);
@@ -113,7 +117,11 @@ async function checkOfficialPSPlusFeed() {
       );
     }
   } catch (error) {
-    console.error("Execution error: ", error);
+    if (error.name === "AbortError") {
+      console.error("Execution error: Fetch request to PS Blog timed out.");
+    } else {
+      console.error("Execution error: ", error);
+    }
     process.exit(1);
   }
 }
