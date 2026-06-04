@@ -1,90 +1,31 @@
-process.env.DISCORD_WEBHOOK_URL = 'http://dummy.webhook.url';
+const { formatListText } = require('./index.js');
 
-const { extractGameList } = require('./index');
-
-describe('extractGameList', () => {
-  it('should extract games using the "| PS" strategy', () => {
-    const htmlBlock = `
-      <p>Ghost of Tsushima | PS4, PS5. This is a great game.</p>
-      <div>Spider-Man: Miles Morales |PS4, PS5</div>
-      <br>Ratchet & Clank | PS5.</br>
-    `;
-    const result = extractGameList(htmlBlock);
-    expect(result).toEqual([
-      'Ghost of Tsushima | PS4, PS5',
-      'Spider-Man: Miles Morales |PS4, PS5',
-      'Ratchet & Clank | PS5'
-    ]);
+describe('formatListText', () => {
+  it('returns a fallback message when given an empty array', () => {
+    expect(formatListText([])).toBe("> *None detected or formatting changed.*\n");
   });
 
-  it('should extract games using the <li> fallback strategy if no "| PS" is found', () => {
-    const htmlBlock = `
-      <ul>
-        <li>Returnal. A fast-paced roguelike.</li>
-        <li>Demon's Souls</li>
-        <li>Last chance to play this game</li>
-      </ul>
-    `;
-    const result = extractGameList(htmlBlock);
-    expect(result).toEqual([
-      'Returnal',
-      "Demon's Souls"
-    ]);
+  it('formats games correctly when no pipes are present', () => {
+    const games = ["God of War", "Spider-Man"];
+    const expected = "1. **God of War**\n2. **Spider-Man**\n";
+    expect(formatListText(games)).toBe(expected);
   });
 
-  it('should extract games from the fallback title if both HTML strategies fail', () => {
-    const htmlBlock = `<p>Check out our new monthly games!</p>`;
-    const fallbackTitle = "PlayStation Plus Monthly Games: Sifu, Destiny 2 The Witch Queen, Hello Neighbor 2 and more";
-    const result = extractGameList(htmlBlock, fallbackTitle);
-    expect(result).toEqual([
-      'Sifu',
-      'Destiny 2 The Witch Queen',
-      'Hello Neighbor 2'
-    ]);
+  it('formats games correctly when pipes separate title and console tags', () => {
+    const games = ["God of War | PS4, PS5", "Spider-Man | PS4"];
+    const expected = "1. **God of War** | PS4, PS5\n2. **Spider-Man** | PS4\n";
+    expect(formatListText(games)).toBe(expected);
   });
 
-  it('should handle HTML entities correctly', () => {
-    const htmlBlock = `<p>Assassin&#8217;s Creed&#8212;Valhalla | PS4, PS5</p>`;
-    const result = extractGameList(htmlBlock);
-    expect(result).toEqual([
-      "Assassin's Creed-Valhalla | PS4, PS5"
-    ]);
+  it('handles a mix of games with and without pipes', () => {
+    const games = ["God of War | PS4, PS5", "Bloodborne", "Spider-Man | PS4"];
+    const expected = "1. **God of War** | PS4, PS5\n2. **Bloodborne**\n3. **Spider-Man** | PS4\n";
+    expect(formatListText(games)).toBe(expected);
   });
 
-  it('should avoid duplicate games', () => {
-    const htmlBlock = `
-      <p>Duplicate Game | PS4</p>
-      <p>Duplicate Game | PS4</p>
-    `;
-    const result = extractGameList(htmlBlock);
-    expect(result).toEqual([
-      'Duplicate Game | PS4'
-    ]);
-  });
-
-  it('should ignore extremely short game names or empty strings', () => {
-    const htmlBlock = `
-      <ul>
-        <li>A</li>
-        <li>Valid Game</li>
-      </ul>
-    `;
-    const result = extractGameList(htmlBlock);
-    expect(result).toEqual([
-      'Valid Game'
-    ]);
-  });
-
-  it('should ignore games longer than 80 characters in the li strategy', () => {
-    const htmlBlock = `
-      <ul>
-        <li>This string is extremely long and is definitely not just a game title because it contains a whole description that is well over eighty characters in length.</li>
-        <li>Short Game</li>
-      </ul>
-    `;
-    const result = extractGameList(htmlBlock);
-    expect(result).toEqual([
-      'Short Game'
-    ]);
+  it('handles spaces around the pipe correctly', () => {
+    const games = ["A|B", "C | D", "E| F"];
+    const expected = "1. **A** |B\n2. **C** | D\n3. **E** | F\n";
+    expect(formatListText(games)).toBe(expected);
   });
 });

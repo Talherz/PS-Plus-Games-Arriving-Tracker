@@ -24,7 +24,7 @@ jobs:
           node-version: '24'
 
       - name: Install Dependencies
-        run: npm install fast-xml-parser --no-save
+        run: npm install fast-xml-parser@5.8.0 --no-save
 
       - name: Run Arrivals Script
         run: node index.js

@@ -3,7 +3,7 @@ const { XMLParser } = require('fast-xml-parser');
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-if (!WEBHOOK_URL) {
+if (require.main === module && !WEBHOOK_URL) {
   console.error("FATAL ERROR: No Discord Webhook URL provided in environment variables.");
   process.exit(1);
 }
@@ -15,10 +15,10 @@ async function checkOfficialPSPlusFeed() {
   try {
     const cacheBuster = Date.now();
     const rssUrl = `https://blog.playstation.com/category/ps-plus/feed/?cb=${cacheBuster}`;
-
+    
     console.log("Fetching native RSS directly from PlayStation...");
     const response = await fetch(rssUrl);
-
+    
     if (!response.ok) {
       console.error(`Aborting: PS Blog returned error ${response.status}`);
       return;
@@ -29,11 +29,17 @@ async function checkOfficialPSPlusFeed() {
       ignoreAttributes: false,
       textNodeName: "text"
     });
-
+    
     const xmlDoc = parser.parse(xmlData);
-    const items = xmlDoc.rss.channel.item;
-    const itemList = Array.isArray(items) ? items : [items];
+    const items = xmlDoc?.rss?.channel?.item;
 
+    if (!items) {
+      console.warn("Aborting: RSS feed is missing expected items structure.");
+      return;
+    }
+
+    const itemList = Array.isArray(items) ? items : [items];
+    
     let posts = [];
     for (let i = 0; i < itemList.length; i++) {
       let item = itemList[i];
@@ -62,7 +68,7 @@ async function checkOfficialPSPlusFeed() {
       const post = posts[i];
       const titleLower = String(post.title).toLowerCase();
       const postId = post.guid;
-
+      
       // Essential Games
       if (!foundEssential && titleLower.includes("monthly games for")) {
         foundEssential = true;
@@ -74,7 +80,7 @@ async function checkOfficialPSPlusFeed() {
           }
         }
       }
-
+      
       // Catalog Games
       if (!foundCatalog && titleLower.includes("game catalog for")) {
         foundCatalog = true;
@@ -104,13 +110,13 @@ async function checkOfficialPSPlusFeed() {
 }
 
 function extractGameList(htmlBlock, fallbackTitle = "") {
-  let extractedGames = [];
-
+  let extractedGamesSet = new Set();
+  
   let decodedHtml = String(htmlBlock)
-    .replace(/&#8211;/g, '-')
-    .replace(/&#8212;/g, '-')
-    .replace(/&#8217;/g, "'")
-    .replace(/&amp;/g, '&')
+    .replace(/&#8211;/g, '-')  
+    .replace(/&#8212;/g, '-')  
+    .replace(/&#8217;/g, "'")  
+    .replace(/&amp;/g, '&')    
     .replace(/&nbsp;/g, ' ');
 
   let textWithNewlines = decodedHtml.replace(/<\/?(p|br|li|h[1-6]|div)[^>]*>/gi, '\n');
@@ -127,38 +133,38 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
     let line = lines[i].trim();
     if (line.includes("| PS") || line.includes("|PS")) {
       let gameString = isolateGameString(line);
-      if (gameString.length > 2 && !extractedGames.includes(gameString)) {
-        extractedGames.push(gameString);
+      if (gameString.length > 2 && !extractedGamesSet.has(gameString)) {
+        extractedGamesSet.add(gameString);
       }
     }
   }
 
-  if (extractedGames.length === 0) {
+  if (extractedGamesSet.size === 0) {
     const listRegex = /<li>(.*?)<\/li>/g;
     let match;
     while ((match = listRegex.exec(decodedHtml)) !== null) {
       let rawText = match[1].replace(/<[^>]*>?/gm, '').trim();
       let gameString = isolateGameString(rawText);
-
-      if (gameString.length > 2 && gameString.length < 80 && !String(gameString).toLowerCase().includes("last chance") && !extractedGames.includes(gameString)) {
-        extractedGames.push(gameString);
+      
+      if (gameString.length > 2 && gameString.length < 80 && !String(gameString).toLowerCase().includes("last chance") && !extractedGamesSet.has(gameString)) {
+        extractedGamesSet.add(gameString);
       }
     }
   }
 
-  if (extractedGames.length === 0 && fallbackTitle.includes(":")) {
+  if (extractedGamesSet.size === 0 && fallbackTitle.includes(":")) {
     let cleanTitle = fallbackTitle.replace(/&#8211;/g, '-').replace(/&#8217;/g, "'").replace(/&amp;/g, '&');
     let titleString = cleanTitle.split(":")[1].replace(/and more/i, "").trim();
     let rawGames = titleString.split(/,(?![^()]*\))|\s+and\s+/i);
     for (let i = 0; i < rawGames.length; i++) {
       let gameName = rawGames[i].trim();
-      if (gameName.length > 2 && !extractedGames.includes(gameName)) {
-        extractedGames.push(gameName);
+      if (gameName.length > 2 && !extractedGamesSet.has(gameName)) {
+        extractedGamesSet.add(gameName);
       }
     }
   }
 
-  return extractedGames;
+  return Array.from(extractedGamesSet);
 }
 
 function formatListText(gameArray) {
@@ -171,9 +177,9 @@ function formatListText(gameArray) {
       let splitIndex = gameStr.indexOf("|");
       let title = gameStr.substring(0, splitIndex).trim();
       let consoles = gameStr.substring(splitIndex).trim();
-      listText += (i + 1) + ". **" + title + "** " + consoles + "\n";
+      listText += `${i + 1}. **${title}** ${consoles}\n`;
     } else {
-      listText += (i + 1) + ". **" + gameStr + "**\n";
+      listText += `${i + 1}. **${gameStr}**\n`;
     }
   }
   return listText;
@@ -188,12 +194,12 @@ async function processBlogContent(post, type) {
     embedColor = 3447003;
     let safeHtml = post.content.replace(/Extra and Premium/ig, "Extra_And_Premium");
     safeHtml = safeHtml.replace(/Extra & Premium/ig, "Extra_And_Premium");
-
+    
     let blocks = safeHtml.split(/<h[1-4][^>]*>[^<]*Premium[^<]*<\/h[1-4]>/i);
     if (blocks.length === 1) {
       blocks = safeHtml.split(/<p>\s*<strong>[^<]*Premium[^<]*<\/strong>\s*<\/p>/i);
     }
-
+    
     if (blocks.length === 1) {
       let splitIndex = safeHtml.indexOf("PlayStation Plus Premium", 800);
       if (splitIndex === -1) splitIndex = safeHtml.indexOf("Premium | Classics", 800);
@@ -209,13 +215,13 @@ async function processBlogContent(post, type) {
 
     messageContent = "@everyone 🌟 **New PS Plus Game Catalog Update!**\n\n";
     messageContent += "🟦 **EXTRA:**\n" + formatListText(extraGames) + "\n";
-
+    
     if (premiumGames.length > 0) {
       messageContent += "🟪 **PREMIUM:**\n" + formatListText(premiumGames);
     }
     tierText = "Click the blog link below to see platform details (PS4/PS5).";
   } else {
-    embedColor = 16766720;
+    embedColor = 16766720; 
     let essentialGames = extractGameList(post.content, post.title);
     messageContent = "@everyone 🚨 **New PS Plus Essential Games Announced!**\n\n";
     messageContent += "🟨 **MONTHLY GAMES:**\n" + formatListText(essentialGames);
@@ -241,12 +247,12 @@ async function processBlogContent(post, type) {
 
   const payload = {
     "username": "Talherz Waifu",
-    "content": messageContent,
+    "content": messageContent, 
     "embeds": [embedData]
   };
-
+  
   console.log(`Attempting to send alert to Discord for: ${post.title}`);
-
+  
   for (let attempt = 1; attempt <= 3; attempt++) {
     const res = await fetch(WEBHOOK_URL, {
       method: "POST",
@@ -275,7 +281,7 @@ async function processBlogContent(post, type) {
     console.error(`Reason: ${errorText}`);
     return false;
   }
-
+  
   return false;
 }
 
@@ -283,4 +289,6 @@ if (require.main === module) {
   checkOfficialPSPlusFeed();
 }
 
-module.exports = { extractGameList };
+module.exports = {
+  formatListText
+};
