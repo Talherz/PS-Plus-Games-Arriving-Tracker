@@ -109,7 +109,9 @@ async function checkOfficialPSPlusFeed() {
     }
 
     if (stateChanged) {
-      fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+      const tempStateFile = `${STATE_FILE}.tmp`;
+      fs.writeFileSync(tempStateFile, JSON.stringify(state, null, 2));
+      fs.renameSync(tempStateFile, STATE_FILE);
       console.log("Memory state updated.");
     } else {
       console.log(
