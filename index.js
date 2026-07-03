@@ -188,10 +188,12 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
       .replace(/and more/i, "")
       .trim();
     let rawGames = titleString.split(/,(?![^()]*\))|\s+and\s+/i);
+    let extractedGamesSet = new Set(extractedGames);
     for (let i = 0; i < rawGames.length; i++) {
       let gameName = rawGames[i].trim();
-      if (gameName.length > 2 && !extractedGames.includes(gameName)) {
+      if (gameName.length > 2 && !extractedGamesSet.has(gameName)) {
         extractedGames.push(gameName);
+        extractedGamesSet.add(gameName);
       }
     }
   }
