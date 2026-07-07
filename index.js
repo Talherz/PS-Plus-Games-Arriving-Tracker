@@ -139,6 +139,7 @@ function decodeHtmlEntities(text) {
 
 function extractGameList(htmlBlock, fallbackTitle = "") {
   let extractedGames = [];
+  let seenGames = new Set();
 
   let decodedHtml = decodeHtmlEntities(htmlBlock);
 
@@ -159,7 +160,8 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
     let line = lines[i].trim();
     if (line.includes("| PS") || line.includes("|PS")) {
       let gameString = isolateGameString(line);
-      if (gameString.length > 2 && !extractedGames.includes(gameString)) {
+      if (gameString.length > 2 && !seenGames.has(gameString)) {
+        seenGames.add(gameString);
         extractedGames.push(gameString);
       }
     }
@@ -176,8 +178,9 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
         gameString.length > 2 &&
         gameString.length < 80 &&
         !String(gameString).toLowerCase().includes("last chance") &&
-        !extractedGames.includes(gameString)
+        !seenGames.has(gameString)
       ) {
+        seenGames.add(gameString);
         extractedGames.push(gameString);
       }
     }
@@ -192,7 +195,8 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
     let rawGames = titleString.split(/,(?![^()]*\))|\s+and\s+/i);
     for (let i = 0; i < rawGames.length; i++) {
       let gameName = rawGames[i].trim();
-      if (gameName.length > 2 && !extractedGames.includes(gameName)) {
+      if (gameName.length > 2 && !seenGames.has(gameName)) {
+        seenGames.add(gameName);
         extractedGames.push(gameName);
       }
     }
