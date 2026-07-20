@@ -4,7 +4,7 @@ const { XMLParser } = require("fast-xml-parser");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
-if (!WEBHOOK_URL) {
+if (!WEBHOOK_URL && require.main === module) {
   console.error(
     "FATAL ERROR: No Discord Webhook URL provided in environment variables.",
   );
@@ -347,4 +347,10 @@ async function processBlogContent(post, type) {
   return false;
 }
 
-checkOfficialPSPlusFeed();
+if (require.main === module) {
+  checkOfficialPSPlusFeed();
+}
+
+module.exports = {
+  decodeHtmlEntities,
+};
