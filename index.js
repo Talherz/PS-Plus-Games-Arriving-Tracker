@@ -197,13 +197,11 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
       .split(":")[1]
       .replace(/and more/i, "")
       .trim();
-    let rawGames = titleString.split(/,(?![^()]*\))|\s+and\s+/i);
-    for (let i = 0; i < rawGames.length; i++) {
-      let gameName = rawGames[i].trim();
-      if (gameName.length > 2) {
-        extractedGames.add(gameName);
-      }
-    }
+    titleString
+      .split(/,(?![^()]*\))|\s+and\s+/i)
+      .map((game) => game.trim())
+      .filter((game) => game.length > 2)
+      .forEach((game) => extractedGames.add(game));
   }
 
   return Array.from(extractedGames);
