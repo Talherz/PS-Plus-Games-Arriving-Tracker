@@ -212,7 +212,7 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
 function formatListText(gameArray) {
   if (gameArray.length === 0)
     return "> *None detected or formatting changed.*\n";
-  let listText = "";
+  let formattedLines = [];
   for (let i = 0; i < gameArray.length; i++) {
     let gameStr = gameArray[i];
     // Split the game string if it contains a pipe to separate the title from the console tags
@@ -220,12 +220,12 @@ function formatListText(gameArray) {
       let splitIndex = gameStr.indexOf("|");
       let title = gameStr.substring(0, splitIndex).trim();
       let consoles = gameStr.substring(splitIndex).trim();
-      listText += i + 1 + ". **" + title + "** " + consoles + "\n";
+      formattedLines.push(i + 1 + ". **" + title + "** " + consoles);
     } else {
-      listText += i + 1 + ". **" + gameStr + "**\n";
+      formattedLines.push(i + 1 + ". **" + gameStr + "**");
     }
   }
-  return listText;
+  return formattedLines.join("\n") + "\n";
 }
 
 async function processBlogContent(post, type) {
