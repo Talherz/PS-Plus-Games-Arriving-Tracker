@@ -1,4 +1,4 @@
-const { decodeHtmlEntities } = require("./index");
+const { decodeHtmlEntities, formatListText } = require("./index");
 
 describe("decodeHtmlEntities", () => {
   it("should replace &#8211; with a hyphen", () => {
@@ -41,5 +41,29 @@ describe("decodeHtmlEntities", () => {
     expect(decodeHtmlEntities(123)).toBe("123");
     expect(decodeHtmlEntities(null)).toBe("null");
     expect(decodeHtmlEntities(undefined)).toBe("undefined");
+  });
+});
+
+describe("formatListText", () => {
+  it("should return a specific message for an empty array", () => {
+    expect(formatListText([])).toBe("> *None detected or formatting changed.*\n");
+  });
+
+  it("should format an array of games without pipes", () => {
+    const games = ["Game 1", "Game 2"];
+    const expected = "1. **Game 1**\n2. **Game 2**\n";
+    expect(formatListText(games)).toBe(expected);
+  });
+
+  it("should format an array of games with pipes to separate title and console", () => {
+    const games = ["Game 1 | PS4", "Game 2 | PS4, PS5"];
+    const expected = "1. **Game 1** | PS4\n2. **Game 2** | PS4, PS5\n";
+    expect(formatListText(games)).toBe(expected);
+  });
+
+  it("should handle mixed array of games with and without pipes", () => {
+    const games = ["Game 1", "Game 2 | PS4"];
+    const expected = "1. **Game 1**\n2. **Game 2** | PS4\n";
+    expect(formatListText(games)).toBe(expected);
   });
 });
