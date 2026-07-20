@@ -37,18 +37,14 @@ async function checkOfficialPSPlusFeed() {
     });
 
     const xmlDoc = parser.parse(xmlData);
-    if (
-      !xmlDoc ||
-      !xmlDoc.rss ||
-      !xmlDoc.rss.channel ||
-      !xmlDoc.rss.channel.item
-    ) {
+    const items = xmlDoc?.rss?.channel?.item;
+
+    if (!items) {
       console.error(
         "Aborting: XML response does not contain valid RSS feed structure.",
       );
       return;
     }
-    const items = xmlDoc.rss.channel.item;
     const itemList = Array.isArray(items) ? items : [items];
 
     let posts = [];
