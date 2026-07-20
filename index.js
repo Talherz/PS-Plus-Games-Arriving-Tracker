@@ -353,4 +353,5 @@ if (require.main === module) {
 
 module.exports = {
   decodeHtmlEntities,
+  formatListText,
 };
