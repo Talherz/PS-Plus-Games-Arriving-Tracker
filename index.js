@@ -313,11 +313,35 @@ async function processBlogContent(post, type) {
   console.log(`Attempting to send alert to Discord for: ${post.title}`);
 
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await fetch(WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    let res;
+    try {
+      res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.warn(
+          `⚠️ Discord webhook fetch timed out (attempt ${attempt}/3)`,
+        );
+      } else {
+        console.warn(
+          `⚠️ Discord webhook fetch error (attempt ${attempt}/3): ${error.message}`,
+        );
+      }
+      if (attempt < 3) {
+        await sleep(2000); // Wait a bit before retrying on network error/timeout
+        continue;
+      }
+      return false;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (res.ok) {
       console.log("✅ SUCCESS! Discord accepted the message.");
