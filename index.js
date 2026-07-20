@@ -1,4 +1,5 @@
 const fs = require("fs");
+const fsPromises = require("fs").promises;
 const { XMLParser } = require("fast-xml-parser");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
@@ -68,10 +69,11 @@ async function checkOfficialPSPlusFeed() {
 
     // Load Memory State
     let state = { LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" };
-    if (fs.existsSync(STATE_FILE)) {
-      try {
-        state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
-      } catch (e) {
+    try {
+      const data = await fsPromises.readFile(STATE_FILE, "utf8");
+      state = JSON.parse(data);
+    } catch (e) {
+      if (e.code !== "ENOENT") {
         console.error(
           "Error parsing STATE_FILE, using default state:",
           e.message,
@@ -117,8 +119,8 @@ async function checkOfficialPSPlusFeed() {
 
     if (stateChanged) {
       const tempStateFile = `${STATE_FILE}.tmp`;
-      fs.writeFileSync(tempStateFile, JSON.stringify(state, null, 2));
-      fs.renameSync(tempStateFile, STATE_FILE);
+      await fsPromises.writeFile(tempStateFile, JSON.stringify(state, null, 2));
+      await fsPromises.rename(tempStateFile, STATE_FILE);
       console.log("Memory state updated.");
     } else {
       console.log(
