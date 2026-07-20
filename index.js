@@ -235,9 +235,11 @@ async function processBlogContent(post, type) {
   let messageContent = "";
   let tierText = "";
 
+  const postContentStr = String(post.content);
+
   if (type === "Catalog") {
     embedColor = 3447003;
-    let safeHtml = post.content.replace(
+    let safeHtml = postContentStr.replace(
       /Extra and Premium/gi,
       "Extra_And_Premium",
     );
@@ -276,7 +278,7 @@ async function processBlogContent(post, type) {
     tierText = "Click the blog link below to see platform details (PS4/PS5).";
   } else {
     embedColor = 16766720;
-    let essentialGames = extractGameList(post.content, post.title);
+    let essentialGames = extractGameList(postContentStr, post.title);
     messageContent =
       "@everyone 🚨 **New PS Plus Essential Games Announced!**\n\n";
     messageContent +=
@@ -285,7 +287,7 @@ async function processBlogContent(post, type) {
   }
 
   let imageUrl = "";
-  const imgMatch = post.content.match(
+  const imgMatch = postContentStr.match(
     /src="(https:\/\/[^"]+\.(?:jpg|png|jpeg|webp)[^"]*)"/i,
   );
   if (imgMatch) imageUrl = imgMatch[1];
