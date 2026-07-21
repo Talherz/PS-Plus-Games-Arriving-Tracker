@@ -1,4 +1,8 @@
-const { decodeHtmlEntities, formatListText } = require("./index");
+const {
+  decodeHtmlEntities,
+  formatListText,
+  extractGameList,
+} = require("./index");
 
 describe("decodeHtmlEntities", () => {
   it("should replace &#8211; with a hyphen", () => {
@@ -46,7 +50,9 @@ describe("decodeHtmlEntities", () => {
 
 describe("formatListText", () => {
   it("should return a specific message for an empty array", () => {
-    expect(formatListText([])).toBe("> *None detected or formatting changed.*\n");
+    expect(formatListText([])).toBe(
+      "> *None detected or formatting changed.*\n",
+    );
   });
 
   it("should format an array of games without pipes", () => {
@@ -65,5 +71,68 @@ describe("formatListText", () => {
     const games = ["Game 1", "Game 2 | PS4"];
     const expected = "1. **Game 1**\n2. **Game 2** | PS4\n";
     expect(formatListText(games)).toBe(expected);
+  });
+});
+
+describe("extractGameList", () => {
+  it("should extract games using the '| PS' format", () => {
+    const html = `
+      <p>Here are the games:</p>
+      <ul>
+        <li>Game One | PS4, PS5</li>
+        <li>Another Game |PS5</li>
+        <li>Not a game list item</li>
+      </ul>
+    `;
+    const result = extractGameList(html);
+    expect(result).toEqual(["Game One | PS4, PS5", "Another Game |PS5"]);
+  });
+
+  it("should fallback to extracting from <li> elements if no '| PS' matches are found", () => {
+    const html = `
+      <p>Here are the games:</p>
+      <ul>
+        <li>Game A</li>
+        <li>Game B</li>
+        <li>Last Chance to play this game</li>
+      </ul>
+    `;
+    const result = extractGameList(html);
+    expect(result).toEqual(["Game A", "Game B"]);
+  });
+
+  it("should fallback to parsing the title if neither list formats match", () => {
+    const html = `<p>No list here, just some text.</p>`;
+    const title =
+      "PlayStation Plus Monthly Games: Super Game, Awesome Game and More";
+    const result = extractGameList(html, title);
+    expect(result).toEqual(["Super Game", "Awesome Game"]);
+  });
+
+  it("should ignore short game names when falling back to <li>", () => {
+    const html = `
+      <ul>
+        <li>A</li>
+        <li>Ok</li>
+        <li>Good Game</li>
+      </ul>
+    `;
+    const result = extractGameList(html);
+    expect(result).toEqual(["Good Game"]);
+  });
+
+  it("should remove trailing dots from extracted lines", () => {
+    const html = `
+      <ul>
+        <li>Awesome Game | PS4. This game is awesome.</li>
+      </ul>
+    `;
+    const result = extractGameList(html);
+    expect(result).toEqual(["Awesome Game | PS4"]);
+  });
+
+  it("should handle empty inputs gracefully", () => {
+    expect(extractGameList("")).toEqual([]);
+    expect(extractGameList("", "")).toEqual([]);
   });
 });
