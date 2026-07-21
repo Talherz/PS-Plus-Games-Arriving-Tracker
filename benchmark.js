@@ -1,5 +1,3 @@
-const fs = require('fs');
-
 // We will copy the decodeHtmlEntities and extractGameList functions from index.js
 function decodeHtmlEntities(text) {
   return String(text)
@@ -142,25 +140,26 @@ function extractGameListOptimized(htmlBlock, fallbackTitle = "") {
   return extractedGames;
 }
 
-
 // Generate some fake HTML data to parse
 let fakeHtml = "";
 for (let i = 0; i < 5000; i++) {
-    fakeHtml += `<p>Game Title ${i % 100} | PS4</p>\n`;
+  fakeHtml += `<p>Game Title ${i % 100} | PS4</p>\n`;
 }
 
 function runBenchmark(fn, name) {
-    const start = performance.now();
-    let result;
-    for (let i = 0; i < 1000; i++) {
-        result = fn(fakeHtml, "Monthly games: Game A, Game B");
-    }
-    const end = performance.now();
-    console.log(`${name} took ${end - start} ms`);
-    return end - start;
+  const start = performance.now();
+  let result;
+  for (let i = 0; i < 1000; i++) {
+    result = fn(fakeHtml, "Monthly games: Game A, Game B");
+  }
+  const end = performance.now();
+  console.log(`${name} took ${end - start} ms`);
+  return end - start;
 }
 
 const originalTime = runBenchmark(extractGameListOriginal, "Original");
 const optimizedTime = runBenchmark(extractGameListOptimized, "Optimized");
 
-console.log(`Performance improvement: ${((originalTime - optimizedTime) / originalTime * 100).toFixed(2)}%`);
+console.log(
+  `Performance improvement: ${(((originalTime - optimizedTime) / originalTime) * 100).toFixed(2)}%`,
+);
