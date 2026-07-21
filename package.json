@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "cheerio": "^1.2.0",
     "fast-xml-parser": "^5.10.1"
   },
   "devDependencies": {
