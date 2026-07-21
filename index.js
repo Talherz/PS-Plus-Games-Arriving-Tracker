@@ -1,6 +1,7 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const { XMLParser } = require("fast-xml-parser");
+const cheerio = require("cheerio");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const PREMIUM_SEARCH_OFFSET = 800;
@@ -243,14 +244,27 @@ async function processBlogContent(post, type) {
     );
     safeHtml = safeHtml.replace(/Extra & Premium/gi, "Extra_And_Premium");
 
-    let blocks = safeHtml.split(/<h[1-4][^>]*>[^<]*Premium[^<]*<\/h[1-4]>/i);
-    if (blocks.length === 1) {
-      blocks = safeHtml.split(
-        /<p>\s*<strong>[^<]*Premium[^<]*<\/strong>\s*<\/p>/i,
-      );
+    let blocks = [safeHtml];
+    const $ = cheerio.load(safeHtml, { sourceCodeLocationInfo: true });
+
+    let premiumHeading = $("h1, h2, h3, h4")
+      .filter((i, el) => /Premium/i.test($(el).text()))
+      .first();
+
+    if (premiumHeading.length === 0) {
+      premiumHeading = $("p > strong")
+        .filter((i, el) => /Premium/i.test($(el).text()))
+        .first()
+        .parent();
     }
 
-    if (blocks.length === 1) {
+    if (premiumHeading.length > 0) {
+      const splitIndex = premiumHeading[0].startIndex;
+      blocks = [
+        safeHtml.substring(0, splitIndex),
+        safeHtml.substring(splitIndex),
+      ];
+    } else {
       let splitIndex = safeHtml.indexOf(
         "PlayStation Plus Premium",
         PREMIUM_SEARCH_OFFSET,
