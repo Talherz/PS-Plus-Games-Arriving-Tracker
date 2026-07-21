@@ -219,12 +219,12 @@ function formatListText(gameArray) {
       let splitIndex = gameStr.indexOf("|");
       let title = gameStr.substring(0, splitIndex).trim();
       let consoles = gameStr.substring(splitIndex).trim();
-      formattedLines.push(i + 1 + ". **" + title + "** " + consoles);
+      formattedLines.push(`${i + 1}. **${title}** ${consoles}`);
     } else {
-      formattedLines.push(i + 1 + ". **" + gameStr + "**");
+      formattedLines.push(`${i + 1}. **${gameStr}**`);
     }
   }
-  return formattedLines.join("\n") + "\n";
+  return `${formattedLines.join("\n")}\n`;
 }
 
 async function processBlogContent(post, type) {
@@ -267,10 +267,10 @@ async function processBlogContent(post, type) {
     let premiumGames = extractGameList(premiumBlock, "");
 
     messageContent = "@everyone 🌟 **New PS Plus Game Catalog Update!**\n\n";
-    messageContent += "🟦 **EXTRA:**\n" + formatListText(extraGames) + "\n";
+    messageContent += `🟦 **EXTRA:**\n${formatListText(extraGames)}\n`;
 
     if (premiumGames.length > 0) {
-      messageContent += "🟪 **PREMIUM:**\n" + formatListText(premiumGames);
+      messageContent += `🟪 **PREMIUM:**\n${formatListText(premiumGames)}`;
     }
     tierText = "Click the blog link below to see platform details (PS4/PS5).";
   } else {
@@ -278,8 +278,7 @@ async function processBlogContent(post, type) {
     let essentialGames = extractGameList(postContentStr, post.title);
     messageContent =
       "@everyone 🚨 **New PS Plus Essential Games Announced!**\n\n";
-    messageContent +=
-      "🟨 **MONTHLY GAMES:**\n" + formatListText(essentialGames);
+    messageContent += `🟨 **MONTHLY GAMES:**\n${formatListText(essentialGames)}`;
     tierText = "Click the blog link for full details.";
   }
 
