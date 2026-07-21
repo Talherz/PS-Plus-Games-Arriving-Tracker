@@ -3,6 +3,7 @@ const fsPromises = require("fs").promises;
 const { XMLParser } = require("fast-xml-parser");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const PREMIUM_SEARCH_OFFSET = 800;
 
 if (!WEBHOOK_URL && require.main === module) {
   console.error(
@@ -250,9 +251,15 @@ async function processBlogContent(post, type) {
     }
 
     if (blocks.length === 1) {
-      let splitIndex = safeHtml.indexOf("PlayStation Plus Premium", 800);
+      let splitIndex = safeHtml.indexOf(
+        "PlayStation Plus Premium",
+        PREMIUM_SEARCH_OFFSET,
+      );
       if (splitIndex === -1)
-        splitIndex = safeHtml.indexOf("Premium | Classics", 800);
+        splitIndex = safeHtml.indexOf(
+          "Premium | Classics",
+          PREMIUM_SEARCH_OFFSET,
+        );
       if (splitIndex !== -1) {
         blocks = [
           safeHtml.substring(0, splitIndex),
