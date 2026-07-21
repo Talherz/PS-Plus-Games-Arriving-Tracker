@@ -22,6 +22,7 @@ This bot runs automatically using **GitHub Actions**, keeping your setup simple,
    - In your forked repository, go to **Settings** > **Secrets and variables** > **Actions**.
    - Click **New repository secret**.
    - Name the secret `DISCORD_WEBHOOK_URL` and paste your Webhook URL into the value field.
+   - *(Optional)* If you want to ping a specific role instead of `@everyone`, add another secret named `DISCORD_ROLE_ID` and paste the Role ID.
 4. **Enable Actions:**
    - Go to the **Actions** tab in your repository.
    - Enable the workflows, and manually trigger the "PS Plus Arrivals Tracker" to run your first check! The bot will now run automatically on a schedule.
@@ -60,6 +61,10 @@ If you want to run the bot on your own computer or test out changes to the code,
    You will need a Discord Webhook URL for testing. Run the script with the webhook passed as an environment variable:
    ```bash
    DISCORD_WEBHOOK_URL="your_discord_webhook_url_here" node index.js
+   ```
+   *(Optional)* You can also specify a role to ping using `DISCORD_ROLE_ID`:
+   ```bash
+   DISCORD_WEBHOOK_URL="..." DISCORD_ROLE_ID="1234567890" node index.js
    ```
 
 4. **Running Tests:**

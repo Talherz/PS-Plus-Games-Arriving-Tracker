@@ -4,6 +4,8 @@ const { XMLParser } = require("fast-xml-parser");
 const cheerio = require("cheerio");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const ROLE_ID = process.env.DISCORD_ROLE_ID;
+const MENTION_TEXT = ROLE_ID ? `<@&${ROLE_ID}>` : "@everyone";
 const PREMIUM_SEARCH_OFFSET = 800;
 
 if (!WEBHOOK_URL && require.main === module) {
@@ -287,7 +289,7 @@ async function processBlogContent(post, type) {
     let extraGames = extractGameList(extraBlock, post.title);
     let premiumGames = extractGameList(premiumBlock, "");
 
-    messageContent = "@everyone 🌟 **New PS Plus Game Catalog Update!**\n\n";
+    messageContent = `${MENTION_TEXT} 🌟 **New PS Plus Game Catalog Update!**\n\n`;
     messageContent += `🟦 **EXTRA:**\n${formatListText(extraGames)}\n`;
 
     if (premiumGames.length > 0) {
@@ -297,8 +299,7 @@ async function processBlogContent(post, type) {
   } else {
     embedColor = 16766720;
     let essentialGames = extractGameList(postContentStr, post.title);
-    messageContent =
-      "@everyone 🚨 **New PS Plus Essential Games Announced!**\n\n";
+    messageContent = `${MENTION_TEXT} 🚨 **New PS Plus Essential Games Announced!**\n\n`;
     messageContent += `🟨 **MONTHLY GAMES:**\n${formatListText(essentialGames)}`;
     tierText = "Click the blog link for full details.";
   }
@@ -326,7 +327,7 @@ async function processBlogContent(post, type) {
     username: "Talherz Waifu",
     content: messageContent,
     embeds: [embedData],
-    allowed_mentions: { parse: ["everyone"] },
+    allowed_mentions: { parse: ["everyone", "roles"] },
   };
 
   console.log(`Attempting to send alert to Discord for: ${post.title}`);
