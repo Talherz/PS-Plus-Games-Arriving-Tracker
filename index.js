@@ -21,17 +21,18 @@ async function checkOfficialPSPlusFeed() {
 
     console.log("Fetching native RSS directly from PlayStation...");
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const response = await fetch(rssUrl, { signal: controller.signal });
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
+      clearTimeout(timeoutId);
       console.error(`Aborting: PS Blog returned error ${response.status}`);
       return;
     }
 
     const xmlData = await response.text();
+    clearTimeout(timeoutId);
     const parser = new XMLParser({
       ignoreAttributes: false,
       textNodeName: "text",
