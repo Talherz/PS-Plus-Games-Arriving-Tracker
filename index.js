@@ -314,7 +314,7 @@ async function processBlogContent(post, type) {
   if (imgMatch) imageUrl = imgMatch[1];
 
   const embedData = {
-    title: post.title,
+    title: decodeHtmlEntities(post.title),
     url: post.link,
     description: tierText,
     color: embedColor,
