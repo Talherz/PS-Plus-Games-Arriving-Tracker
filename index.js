@@ -18,9 +18,6 @@ if (!WEBHOOK_URL && require.main === module) {
 const STATE_FILE = "saved_state.json";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const LIST_REGEX_GLOBAL = /<li>(.*?)<\/li>/g;
-const STRIP_HTML_REGEX_GLOBAL = /<[^>]*>?/gm;
-
 async function checkOfficialPSPlusFeed() {
   try {
     const cacheBuster = Date.now();
@@ -183,10 +180,8 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
   }
 
   if (extractedGames.size === 0) {
-    LIST_REGEX_GLOBAL.lastIndex = 0;
-    let match;
-    while ((match = LIST_REGEX_GLOBAL.exec(decodedHtml)) !== null) {
-      let rawText = match[1].replace(STRIP_HTML_REGEX_GLOBAL, "").trim();
+    for (const match of decodedHtml.matchAll(/<li>(.*?)<\/li>/g)) {
+      let rawText = match[1].replace(/<[^>]*>?/gm, "").trim();
       let gameString = isolateGameString(rawText);
 
       if (
