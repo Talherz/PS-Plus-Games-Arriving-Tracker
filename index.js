@@ -154,6 +154,12 @@ function decodeHtmlEntities(text) {
     .replace(/&nbsp;/g, " ");
 }
 
+function isolateGameString(rawLine) {
+  let splitLine = rawLine.split(/\.\s/)[0].trim();
+  if (splitLine.endsWith(".")) splitLine = splitLine.slice(0, -1);
+  return splitLine;
+}
+
 function extractGameList(htmlBlock, fallbackTitle = "") {
   let extractedGames = new Set();
 
@@ -165,12 +171,6 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
   );
   let cleanText = textWithNewlines.replace(/<[^>]*>?/gm, "");
   let lines = cleanText.split("\n");
-
-  function isolateGameString(rawLine) {
-    let splitLine = rawLine.split(/\.\s/)[0].trim();
-    if (splitLine.endsWith(".")) splitLine = splitLine.slice(0, -1);
-    return splitLine;
-  }
 
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i].trim();
