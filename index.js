@@ -251,7 +251,7 @@ function formatListText(gameArray) {
   return `${formattedLines.join("\n")}\n`;
 }
 
-async function processBlogContent(post, type) {
+function parseBlogContent(post, type) {
   let embedColor = 0;
   let messageContent = "";
   let tierText = "";
@@ -329,6 +329,12 @@ async function processBlogContent(post, type) {
   );
   if (imgMatch) imageUrl = imgMatch[1];
 
+  return { messageContent, embedColor, tierText, imageUrl };
+}
+
+function formatDiscordMessage(post, parsedContent) {
+  const { messageContent, embedColor, tierText, imageUrl } = parsedContent;
+
   const embedData = {
     title: decodeHtmlEntities(post.title),
     url: post.link,
@@ -349,7 +355,11 @@ async function processBlogContent(post, type) {
     allowed_mentions: ROLE_ID ? { roles: [ROLE_ID] } : { parse: ["everyone"] },
   };
 
-  console.log(`Attempting to send alert to Discord for: ${post.title}`);
+  return payload;
+}
+
+async function executeWebhookWithRetry(payload, title) {
+  console.log(`Attempting to send alert to Discord for: ${title}`);
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
@@ -409,6 +419,12 @@ async function processBlogContent(post, type) {
   }
 
   return false;
+}
+
+async function processBlogContent(post, type) {
+  const parsedContent = parseBlogContent(post, type);
+  const payload = formatDiscordMessage(post, parsedContent);
+  return await executeWebhookWithRetry(payload, post.title);
 }
 
 if (require.main === module) {
