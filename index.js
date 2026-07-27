@@ -8,11 +8,27 @@ const ROLE_ID = process.env.DISCORD_ROLE_ID;
 const MENTION_TEXT = ROLE_ID ? `<@&${ROLE_ID}>` : "@everyone";
 const PREMIUM_SEARCH_OFFSET = 800;
 
-if (!WEBHOOK_URL && require.main === module) {
-  console.error(
-    "FATAL ERROR: No Discord Webhook URL provided in environment variables.",
+function isValidWebhookUrl(url) {
+  if (!url) return false;
+  return (
+    url.startsWith("https://discord.com/api/webhooks/") ||
+    url.startsWith("https://discordapp.com/api/webhooks/")
   );
-  process.exit(1);
+}
+
+if (require.main === module) {
+  if (!WEBHOOK_URL) {
+    console.error(
+      "FATAL ERROR: No Discord Webhook URL provided in environment variables.",
+    );
+    process.exit(1);
+  }
+  if (!isValidWebhookUrl(WEBHOOK_URL)) {
+    console.error(
+      "FATAL ERROR: The provided Discord Webhook URL is invalid. It must start with https://discord.com/api/webhooks/ or https://discordapp.com/api/webhooks/",
+    );
+    process.exit(1);
+  }
 }
 
 const STATE_FILE = "saved_state.json";
@@ -398,4 +414,5 @@ module.exports = {
   decodeHtmlEntities,
   formatListText,
   extractGameList,
+  isValidWebhookUrl,
 };

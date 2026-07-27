@@ -2,7 +2,41 @@ const {
   decodeHtmlEntities,
   formatListText,
   extractGameList,
+  isValidWebhookUrl,
 } = require("./index");
+
+describe("isValidWebhookUrl", () => {
+  it("should return true for valid discord.com webhook URLs", () => {
+    expect(isValidWebhookUrl("https://discord.com/api/webhooks/123/abc")).toBe(
+      true,
+    );
+  });
+
+  it("should return true for valid discordapp.com webhook URLs", () => {
+    expect(
+      isValidWebhookUrl("https://discordapp.com/api/webhooks/123/abc"),
+    ).toBe(true);
+  });
+
+  it("should return false for invalid URLs", () => {
+    expect(isValidWebhookUrl("https://evil.com/api/webhooks/123/abc")).toBe(
+      false,
+    );
+    expect(isValidWebhookUrl("http://discord.com/api/webhooks/123/abc")).toBe(
+      false,
+    );
+    expect(isValidWebhookUrl("https://discord.com/api/other/123/abc")).toBe(
+      false,
+    );
+    expect(isValidWebhookUrl("discord.com/api/webhooks/123/abc")).toBe(false);
+  });
+
+  it("should return false for empty or null inputs", () => {
+    expect(isValidWebhookUrl("")).toBe(false);
+    expect(isValidWebhookUrl(null)).toBe(false);
+    expect(isValidWebhookUrl(undefined)).toBe(false);
+  });
+});
 
 describe("decodeHtmlEntities", () => {
   it("should replace &#8211; with a hyphen", () => {
