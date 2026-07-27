@@ -1,7 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const { XMLParser } = require("fast-xml-parser");
-const cheerio = require("cheerio");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ROLE_ID = process.env.DISCORD_ROLE_ID;
@@ -305,35 +304,67 @@ function parseBlogContent(post, type) {
     );
 
     let blocks = [safeHtml];
-    const $ = cheerio.load(safeHtml, { sourceCodeLocationInfo: true });
+    let splitIndex = -1;
 
-    let premiumHeading = $("h1, h2, h3, h4")
-      .filter((i, el) => /Premium/i.test($(el).text()))
-      .first();
+    const headingRegex = /<(h[1-4]|p)[^>]*>([\s\S]*?)<\/\1>/gi;
+    let match;
+    let headerMatchIndex = -1;
+    let paragraphMatchIndex = -1;
 
-    if (premiumHeading.length === 0) {
-      premiumHeading = $("p > strong")
-        .filter((i, el) => /Premium/i.test($(el).text()))
-        .first()
-        .parent();
+    while ((match = headingRegex.exec(safeHtml)) !== null) {
+      const tagName = match[1].toLowerCase();
+      const innerHtml = match[2];
+
+      if (!/Premium/i.test(innerHtml)) continue;
+
+      const textContent = innerHtml.replace(/<[^>]*>?/gm, "");
+
+      if (/Premium/i.test(textContent)) {
+        if (tagName.startsWith("h")) {
+          // If we found a header, record it and break immediately
+          headerMatchIndex = match.index;
+          break;
+        } else if (tagName === "p" && paragraphMatchIndex === -1) {
+          // Check if Premium is in a strong tag, and only record the first occurrence
+          const strongRegex = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
+          let strongMatch;
+          let found = false;
+          while ((strongMatch = strongRegex.exec(innerHtml)) !== null) {
+            const strongText = strongMatch[1].replace(/<[^>]*>?/gm, "");
+            if (/Premium/i.test(strongText)) {
+              found = true;
+              break;
+            }
+          }
+          if (found) {
+            paragraphMatchIndex = match.index;
+          }
+        }
+      }
     }
 
-    if (premiumHeading.length > 0) {
-      const splitIndex = premiumHeading[0].startIndex;
+    if (headerMatchIndex !== -1) {
+      splitIndex = headerMatchIndex;
+    } else if (paragraphMatchIndex !== -1) {
+      splitIndex = paragraphMatchIndex;
+    }
+
+    if (splitIndex !== -1) {
       blocks = [
         safeHtml.substring(0, splitIndex),
         safeHtml.substring(splitIndex),
       ];
     } else {
-      let splitIndex = safeHtml.indexOf(
+      splitIndex = safeHtml.indexOf(
         "PlayStation Plus Premium",
         PREMIUM_SEARCH_OFFSET,
       );
-      if (splitIndex === -1)
+      if (splitIndex === -1) {
         splitIndex = safeHtml.indexOf(
           "Premium | Classics",
           PREMIUM_SEARCH_OFFSET,
         );
+      }
       if (splitIndex !== -1) {
         blocks = [
           safeHtml.substring(0, splitIndex),

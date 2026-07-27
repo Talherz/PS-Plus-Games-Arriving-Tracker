@@ -263,7 +263,11 @@ describe("checkOfficialPSPlusFeed", () => {
     });
 
     // Mock readFile to return empty state so it triggers the webhook
-    jest.spyOn(fsPromises, "readFile").mockResolvedValue(JSON.stringify({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" }));
+    jest
+      .spyOn(fsPromises, "readFile")
+      .mockResolvedValue(
+        JSON.stringify({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" }),
+      );
 
     const feedPromise = checkOfficialPSPlusFeed();
 
@@ -275,9 +279,21 @@ describe("checkOfficialPSPlusFeed", () => {
     await feedPromise;
 
     expect(global.fetch).toHaveBeenCalledTimes(4); // 1 for RSS, 3 for Discord webhook
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 1/3): Network Failure"));
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 2/3): Network Failure"));
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 3/3): Network Failure"));
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Discord webhook fetch error (attempt 1/3): Network Failure",
+      ),
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Discord webhook fetch error (attempt 2/3): Network Failure",
+      ),
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Discord webhook fetch error (attempt 3/3): Network Failure",
+      ),
+    );
 
     jest.useRealTimers();
   });
@@ -290,7 +306,10 @@ describe("processBlogContent", () => {
   beforeEach(() => {
     originalFetch = global.fetch;
     originalEnv = process.env;
-    process.env = { ...originalEnv, DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/123/abc" };
+    process.env = {
+      ...originalEnv,
+      DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/123/abc",
+    };
     jest.spyOn(console, "log").mockImplementation(() => {});
     jest.spyOn(console, "error").mockImplementation(() => {});
     jest.spyOn(console, "warn").mockImplementation(() => {});
@@ -306,7 +325,7 @@ describe("processBlogContent", () => {
     global.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
-      })
+      }),
     );
 
     const post = {
@@ -345,7 +364,7 @@ describe("processBlogContent", () => {
     global.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
-      })
+      }),
     );
 
     const post = {
@@ -384,9 +403,7 @@ describe("processBlogContent", () => {
   });
 
   it("should retry and eventually return false on persistent failure", async () => {
-    global.fetch = jest.fn(() =>
-      Promise.reject(new Error("Network Error"))
-    );
+    global.fetch = jest.fn(() => Promise.reject(new Error("Network Error")));
 
     const post = {
       title: "PlayStation Plus Game Catalog for January",
