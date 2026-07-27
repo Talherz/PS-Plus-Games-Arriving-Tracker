@@ -258,10 +258,9 @@ async function processBlogContent(post, type) {
   if (type === "Catalog") {
     embedColor = 3447003;
     let safeHtml = postContentStr.replace(
-      /Extra and Premium/gi,
+      /Extra (?:and|&) Premium/gi,
       "Extra_And_Premium",
     );
-    safeHtml = safeHtml.replace(/Extra & Premium/gi, "Extra_And_Premium");
 
     let blocks = [safeHtml];
     const $ = cheerio.load(safeHtml, { sourceCodeLocationInfo: true });
