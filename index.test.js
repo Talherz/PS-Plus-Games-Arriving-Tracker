@@ -237,4 +237,45 @@ describe("checkOfficialPSPlusFeed", () => {
       expect.anything(),
     );
   });
+
+  it("should log warnings and retry on Discord webhook fetch error", async () => {
+    jest.useFakeTimers();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Mock successful fetch to valid RSS XML
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-new</guid><description>Test Description</description></item></channel></rss>`;
+
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url && url.includes("playstation.com")) {
+        return Promise.resolve({
+          ok: true,
+          headers: new Headers({ "content-length": mockXml.length.toString() }),
+          body: (async function* () {
+            yield new TextEncoder().encode(mockXml);
+          })(),
+          text: () => Promise.resolve(mockXml),
+        });
+      }
+      return Promise.reject(new Error("Network Failure"));
+    });
+
+    // Mock readFile to return empty state so it triggers the webhook
+    jest.spyOn(fsPromises, "readFile").mockResolvedValue(JSON.stringify({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" }));
+
+    const feedPromise = checkOfficialPSPlusFeed();
+
+    // Advance timers for the retries (2 seconds each attempt)
+    // There are 3 attempts, so wait twice (attempt 1 and 2 fail, attempt 3 fails and exits)
+    await jest.advanceTimersByTimeAsync(2000);
+    await jest.advanceTimersByTimeAsync(2000);
+
+    await feedPromise;
+
+    expect(global.fetch).toHaveBeenCalledTimes(4); // 1 for RSS, 3 for Discord webhook
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 1/3): Network Failure"));
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 2/3): Network Failure"));
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 3/3): Network Failure"));
+
+    jest.useRealTimers();
+  });
 });
