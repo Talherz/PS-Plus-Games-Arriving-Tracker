@@ -157,6 +157,17 @@ describe("extractGameList", () => {
     expect(result).toEqual(["Good Game"]);
   });
 
+  it("should ignore long game names (80+ characters) when falling back to <li>", () => {
+    const html = `
+      <ul>
+        <li>Normal Game Name</li>
+        <li>This is a very long string that is definitely not a game name because it exceeds the eighty character limit.</li>
+      </ul>
+    `;
+    const result = extractGameList(html);
+    expect(result).toEqual(["Normal Game Name"]);
+  });
+
   it("should remove trailing dots from extracted lines", () => {
     const html = `
       <ul>
