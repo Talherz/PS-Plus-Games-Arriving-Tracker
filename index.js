@@ -476,4 +476,5 @@ module.exports = {
   extractGameList,
   isValidWebhookUrl,
   checkOfficialPSPlusFeed,
+  processBlogContent,
 };
