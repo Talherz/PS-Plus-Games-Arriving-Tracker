@@ -69,24 +69,7 @@ async function checkOfficialPSPlusFeed() {
     }
     const itemList = Array.isArray(items) ? items : [items];
 
-    let posts = [];
-    for (let i = 0; i < itemList.length; i++) {
-      let item = itemList[i];
-      let guidStr =
-        item.guid && item.guid.text
-          ? item.guid.text
-          : typeof item.guid === "string"
-            ? item.guid
-            : item.link;
-      posts.push({
-        title: item.title,
-        link: item.link,
-        guid: guidStr,
-        content: item["content:encoded"] || item.description || "",
-      });
-    }
-
-    console.log(`Successfully loaded ${posts.length} posts natively.`);
+    console.log(`Successfully loaded ${itemList.length} posts natively.`);
 
     // Load Memory State
     let state = { LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" };
@@ -106,15 +89,26 @@ async function checkOfficialPSPlusFeed() {
     let foundCatalog = false;
     let stateChanged = false;
 
-    for (let i = 0; i < posts.length; i++) {
-      const post = posts[i];
-      const titleLower = String(post.title).toLowerCase();
-      const postId = post.guid;
+    for (let i = 0; i < itemList.length; i++) {
+      const item = itemList[i];
+      const titleLower = String(item.title).toLowerCase();
+      let postId =
+        item.guid && item.guid.text
+          ? item.guid.text
+          : typeof item.guid === "string"
+            ? item.guid
+            : item.link;
 
       // Essential Games
       if (!foundEssential && titleLower.includes("monthly games for")) {
         foundEssential = true;
         if (postId !== state.LAST_ESSENTIAL_ID) {
+          const post = {
+            title: item.title,
+            link: item.link,
+            guid: postId,
+            content: item["content:encoded"] || item.description || "",
+          };
           const success = await processBlogContent(post, "Essential");
           if (success) {
             state.LAST_ESSENTIAL_ID = postId;
@@ -127,6 +121,12 @@ async function checkOfficialPSPlusFeed() {
       if (!foundCatalog && titleLower.includes("game catalog for")) {
         foundCatalog = true;
         if (postId !== state.LAST_CATALOG_ID) {
+          const post = {
+            title: item.title,
+            link: item.link,
+            guid: postId,
+            content: item["content:encoded"] || item.description || "",
+          };
           const success = await processBlogContent(post, "Catalog");
           if (success) {
             state.LAST_CATALOG_ID = postId;
