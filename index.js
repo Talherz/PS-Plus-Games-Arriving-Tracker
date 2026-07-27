@@ -168,7 +168,10 @@ function decodeHtmlEntities(text) {
 }
 
 function isolateGameString(rawLine) {
-  let splitLine = rawLine.split(/\.\s/)[0].trim();
+  const matchIdx = rawLine.search(/\.\s/);
+  let splitLine = (
+    matchIdx !== -1 ? rawLine.slice(0, matchIdx) : rawLine
+  ).trim();
   if (splitLine.endsWith(".")) splitLine = splitLine.slice(0, -1);
   return splitLine;
 }
