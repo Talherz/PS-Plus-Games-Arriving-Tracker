@@ -209,6 +209,10 @@ describe("checkOfficialPSPlusFeed", () => {
     global.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
+        headers: new Headers({ "content-length": mockXml.length.toString() }),
+        body: (async function* () {
+          yield new TextEncoder().encode(mockXml);
+        })(),
         text: () => Promise.resolve(mockXml),
       }),
     );
