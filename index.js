@@ -325,7 +325,7 @@ async function processBlogContent(post, type) {
     username: "Talherz Waifu",
     content: messageContent,
     embeds: [embedData],
-    allowed_mentions: { parse: ["everyone", "roles"] },
+    allowed_mentions: ROLE_ID ? { roles: [ROLE_ID] } : { parse: ["everyone"] },
   };
 
   console.log(`Attempting to send alert to Discord for: ${post.title}`);
