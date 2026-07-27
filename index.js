@@ -34,56 +34,73 @@ if (require.main === module) {
 const STATE_FILE = "saved_state.json";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function fetchPlayStationBlogFeed() {
+  const cacheBuster = Date.now();
+  const rssUrl = `https://blog.playstation.com/category/ps-plus/feed/?cb=${cacheBuster}`;
+
+  console.log("Fetching native RSS directly from PlayStation...");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  const response = await fetch(rssUrl, { signal: controller.signal });
+
+  if (!response.ok) {
+    clearTimeout(timeoutId);
+    console.error(`Aborting: PS Blog returned error ${response.status}`);
+    return null;
+  }
+
+  const xmlData = await response.text();
+  clearTimeout(timeoutId);
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    textNodeName: "text",
+  });
+
+  const xmlDoc = parser.parse(xmlData);
+  const items = xmlDoc?.rss?.channel?.item;
+
+  if (!items) {
+    console.error(
+      "Aborting: XML response does not contain valid RSS feed structure.",
+    );
+    return null;
+  }
+  const itemList = Array.isArray(items) ? items : [items];
+
+  console.log(`Successfully loaded ${itemList.length} posts natively.`);
+  return itemList;
+}
+
+async function loadMemoryState() {
+  let state = { LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" };
+  try {
+    const data = await fsPromises.readFile(STATE_FILE, "utf8");
+    state = JSON.parse(data);
+  } catch (e) {
+    if (e.code !== "ENOENT") {
+      console.error(
+        "Error parsing STATE_FILE, using default state:",
+        e.message,
+      );
+    }
+  }
+  return state;
+}
+
+async function saveMemoryState(state) {
+  const tempStateFile = `${STATE_FILE}.tmp`;
+  await fsPromises.writeFile(tempStateFile, JSON.stringify(state, null, 2));
+  await fsPromises.rename(tempStateFile, STATE_FILE);
+  console.log("Memory state updated.");
+}
+
 async function checkOfficialPSPlusFeed() {
   try {
-    const cacheBuster = Date.now();
-    const rssUrl = `https://blog.playstation.com/category/ps-plus/feed/?cb=${cacheBuster}`;
+    const itemList = await fetchPlayStationBlogFeed();
+    if (!itemList) return;
 
-    console.log("Fetching native RSS directly from PlayStation...");
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    const response = await fetch(rssUrl, { signal: controller.signal });
-
-    if (!response.ok) {
-      clearTimeout(timeoutId);
-      console.error(`Aborting: PS Blog returned error ${response.status}`);
-      return;
-    }
-
-    const xmlData = await response.text();
-    clearTimeout(timeoutId);
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      textNodeName: "text",
-    });
-
-    const xmlDoc = parser.parse(xmlData);
-    const items = xmlDoc?.rss?.channel?.item;
-
-    if (!items) {
-      console.error(
-        "Aborting: XML response does not contain valid RSS feed structure.",
-      );
-      return;
-    }
-    const itemList = Array.isArray(items) ? items : [items];
-
-    console.log(`Successfully loaded ${itemList.length} posts natively.`);
-
-    // Load Memory State
-    let state = { LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" };
-    try {
-      const data = await fsPromises.readFile(STATE_FILE, "utf8");
-      state = JSON.parse(data);
-    } catch (e) {
-      if (e.code !== "ENOENT") {
-        console.error(
-          "Error parsing STATE_FILE, using default state:",
-          e.message,
-        );
-      }
-    }
+    let state = await loadMemoryState();
 
     let foundEssential = false;
     let foundCatalog = false;
@@ -139,10 +156,7 @@ async function checkOfficialPSPlusFeed() {
     }
 
     if (stateChanged) {
-      const tempStateFile = `${STATE_FILE}.tmp`;
-      await fsPromises.writeFile(tempStateFile, JSON.stringify(state, null, 2));
-      await fsPromises.rename(tempStateFile, STATE_FILE);
-      console.log("Memory state updated.");
+      await saveMemoryState(state);
     } else {
       console.log(
         "No new posts detected or updates required. State unchanged.",
