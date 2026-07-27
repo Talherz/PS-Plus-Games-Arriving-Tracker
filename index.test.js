@@ -1,8 +1,10 @@
+const fsPromises = require("fs").promises;
 const {
   decodeHtmlEntities,
   formatListText,
   extractGameList,
   isValidWebhookUrl,
+  checkOfficialPSPlusFeed,
 } = require("./index");
 
 describe("isValidWebhookUrl", () => {
@@ -168,5 +170,56 @@ describe("extractGameList", () => {
   it("should handle empty inputs gracefully", () => {
     expect(extractGameList("")).toEqual([]);
     expect(extractGameList("", "")).toEqual([]);
+  });
+});
+describe("checkOfficialPSPlusFeed", () => {
+  let originalFetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest
+      .spyOn(fsPromises, "writeFile")
+      .mockImplementation(() => Promise.resolve());
+    jest
+      .spyOn(fsPromises, "rename")
+      .mockImplementation(() => Promise.resolve());
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  it("should handle missing saved state file (ENOENT) without crashing", async () => {
+    // Mock successful fetch to valid RSS XML
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-1</guid><description>Test Description</description></item></channel></rss>`;
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve(mockXml),
+      }),
+    );
+
+    // Mock readFile to throw ENOENT
+    const error = new Error("ENOENT: no such file or directory");
+    error.code = "ENOENT";
+    jest.spyOn(fsPromises, "readFile").mockRejectedValue(error);
+
+    // Attempt execution
+    await expect(checkOfficialPSPlusFeed()).resolves.not.toThrow();
+
+    // Verify it attempted to read the file
+    expect(fsPromises.readFile).toHaveBeenCalledWith(
+      "saved_state.json",
+      "utf8",
+    );
+
+    // Verify it doesn't log an error for ENOENT
+    expect(console.error).not.toHaveBeenCalledWith(
+      "Error parsing STATE_FILE, using default state:",
+      expect.anything(),
+    );
   });
 });
