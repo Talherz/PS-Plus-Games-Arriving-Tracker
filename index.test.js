@@ -1,3 +1,5 @@
+process.env.DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/123/abc";
+
 const fsPromises = require("fs").promises;
 const {
   decodeHtmlEntities,
@@ -5,6 +7,7 @@ const {
   extractGameList,
   isValidWebhookUrl,
   checkOfficialPSPlusFeed,
+  processBlogContent,
 } = require("./index");
 
 describe("isValidWebhookUrl", () => {
@@ -275,6 +278,135 @@ describe("checkOfficialPSPlusFeed", () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 1/3): Network Failure"));
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 2/3): Network Failure"));
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("Discord webhook fetch error (attempt 3/3): Network Failure"));
+
+    jest.useRealTimers();
+  });
+});
+
+describe("processBlogContent", () => {
+  let originalFetch;
+  let originalEnv;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    originalEnv = process.env;
+    process.env = { ...originalEnv, DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/123/abc" };
+    jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    process.env = originalEnv;
+    jest.restoreAllMocks();
+  });
+
+  it("should process and send Essential games payload", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+      })
+    );
+
+    const post = {
+      title: "PlayStation Plus Monthly Games for January",
+      link: "https://blog.playstation.com/essential",
+      guid: "essential-123",
+      content: `
+        <p>Here are the games:</p>
+        <ul>
+          <li>Game 1 | PS4</li>
+          <li>Game 2 | PS5</li>
+        </ul>
+        <img src="https://example.com/image.jpg" />
+      `,
+    };
+
+    const result = await processBlogContent(post, "Essential");
+
+    expect(result).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    const fetchCallUrl = global.fetch.mock.calls[0][0];
+    const fetchCallOptions = global.fetch.mock.calls[0][1];
+
+    expect(fetchCallUrl).toBe("https://discord.com/api/webhooks/123/abc");
+    const payload = JSON.parse(fetchCallOptions.body);
+
+    expect(payload.embeds[0].color).toBe(16766720); // Essential color
+    expect(payload.embeds[0].image.url).toBe("https://example.com/image.jpg");
+    expect(payload.content).toContain("New PS Plus Essential Games Announced!");
+    expect(payload.content).toContain("**Game 1** | PS4");
+    expect(payload.content).toContain("**Game 2** | PS5");
+  });
+
+  it("should process and send Catalog games payload with Extra and Premium", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+      })
+    );
+
+    const post = {
+      title: "PlayStation Plus Game Catalog for January",
+      link: "https://blog.playstation.com/catalog",
+      guid: "catalog-123",
+      content: `
+        <p>Extra games:</p>
+        <ul>
+          <li>Extra Game 1 | PS4</li>
+        </ul>
+        <h2>PlayStation Plus Premium</h2>
+        <ul>
+          <li>Premium Game 1 | PS4, PS5</li>
+        </ul>
+        <img src="https://example.com/catalog.jpg" />
+      `,
+    };
+
+    const result = await processBlogContent(post, "Catalog");
+
+    expect(result).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    const fetchCallUrl = global.fetch.mock.calls[0][0];
+    const fetchCallOptions = global.fetch.mock.calls[0][1];
+
+    expect(fetchCallUrl).toBe("https://discord.com/api/webhooks/123/abc");
+    const payload = JSON.parse(fetchCallOptions.body);
+
+    expect(payload.embeds[0].color).toBe(3447003); // Catalog color
+    expect(payload.embeds[0].image.url).toBe("https://example.com/catalog.jpg");
+    expect(payload.content).toContain("New PS Plus Game Catalog Update!");
+    expect(payload.content).toContain("**Extra Game 1** | PS4");
+    expect(payload.content).toContain("**Premium Game 1** | PS4, PS5");
+  });
+
+  it("should retry and eventually return false on persistent failure", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.reject(new Error("Network Error"))
+    );
+
+    const post = {
+      title: "PlayStation Plus Game Catalog for January",
+      link: "https://blog.playstation.com/catalog",
+      guid: "catalog-123",
+      content: "<p>Content</p>",
+    };
+
+    jest.useFakeTimers();
+
+    const processPromise = processBlogContent(post, "Catalog");
+
+    // Fast-forward through sleep calls (wait a bit before retrying, 2000ms each)
+    await jest.advanceTimersByTimeAsync(2000);
+    await jest.advanceTimersByTimeAsync(2000);
+
+    const result = await processPromise;
+
+    expect(result).toBe(false);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
 
     jest.useRealTimers();
   });
