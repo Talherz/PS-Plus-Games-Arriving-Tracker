@@ -1,6 +1,6 @@
 # 🌟 PS Plus Game Arrivals Tracker
 
-A friendly, automated bot that checks the Official PlayStation Blog for new "Monthly Essential" and "Game Catalog" announcements. When new games are announced, it extracts the list of games and delivers a neatly formatted message directly to your Discord server!
+An automated bot that checks the Official PlayStation Blog for new "Monthly Essential" and "Game Catalog" announcements. When new games are announced, it extracts the list of games and delivers a neatly formatted message directly to your Discord server!
 
 This bot runs automatically using **GitHub Actions**, keeping your setup simple, free, and secure. It remembers what it has already posted, so your Discord server won't be spammed with duplicate messages.
 
