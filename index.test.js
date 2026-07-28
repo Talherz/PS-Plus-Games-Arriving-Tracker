@@ -241,6 +241,134 @@ describe("checkOfficialPSPlusFeed", () => {
     );
   });
 
+  it("should handle non-200 HTTP responses from PS Blog", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await checkOfficialPSPlusFeed();
+
+    expect(console.error).toHaveBeenCalledWith("Aborting: PS Blog returned error 500");
+  });
+
+  it("should handle response size limit (content-length header)", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ "content-length": "6291456" }), // > 5MB
+    });
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await checkOfficialPSPlusFeed();
+
+    expect(console.error).toHaveBeenCalledWith("Aborting: Response size exceeds limit");
+  });
+
+  it("should handle streaming size limit exceeded", async () => {
+    const chunk = new Uint8Array(6 * 1024 * 1024); // 6MB chunk
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers(),
+      body: (async function* () {
+        yield chunk;
+      })(),
+    });
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await checkOfficialPSPlusFeed();
+
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Aborting: Error reading stream - Response body exceeds size limit"));
+  });
+
+  it("should handle invalid RSS XML structure", async () => {
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>`;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers(),
+      body: (async function* () {
+        yield new TextEncoder().encode(mockXml);
+      })(),
+    });
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await checkOfficialPSPlusFeed();
+
+    expect(console.error).toHaveBeenCalledWith("Aborting: XML response does not contain valid RSS feed structure.");
+  });
+
+  it("should log error on loading state failure other than ENOENT", async () => {
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-1</guid><description>Test Description</description></item></channel></rss>`;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers(),
+      body: (async function* () {
+        yield new TextEncoder().encode(mockXml);
+      })(),
+    });
+
+    const error = new Error("Permission denied");
+    error.code = "EACCES";
+    jest.spyOn(fsPromises, "readFile").mockRejectedValue(error);
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    await checkOfficialPSPlusFeed();
+    expect(console.error).toHaveBeenCalledWith("Error parsing STATE_FILE, using default state:", "Permission denied");
+  });
+
+  it("should process Catalog games and update state", async () => {
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>PlayStation Plus Game Catalog for January</title><link>https://example.com/catalog</link><guid>test-guid-catalog</guid><description>Test Catalog Description</description></item></channel></rss>`;
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url && url.includes("playstation.com")) {
+        return Promise.resolve({
+          ok: true,
+          headers: new Headers(),
+          body: (async function* () {
+            yield new TextEncoder().encode(mockXml);
+          })(),
+        });
+      }
+      return Promise.resolve({ ok: true }); // Discord mock
+    });
+
+    jest.spyOn(fsPromises, "readFile").mockResolvedValue(JSON.stringify({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" }));
+
+    await checkOfficialPSPlusFeed();
+    expect(fsPromises.writeFile).toHaveBeenCalledWith(expect.stringContaining("saved_state.json.tmp"), expect.stringContaining("test-guid-catalog"));
+  });
+
+  it("should catch and log fetch timeout error correctly", async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn().mockRejectedValue({ name: "AbortError" });
+    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const promise = checkOfficialPSPlusFeed();
+    await jest.runAllTimersAsync();
+    await promise;
+
+    expect(console.error).toHaveBeenCalledWith("Execution error: Fetch request to PS Blog timed out.");
+    expect(mockExit).toHaveBeenCalledWith(1);
+    mockExit.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it("should catch and log other execution errors correctly", async () => {
+    jest.useFakeTimers();
+    global.fetch = jest.fn().mockRejectedValue(new Error("Some random error"));
+    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const promise = checkOfficialPSPlusFeed();
+    await jest.runAllTimersAsync();
+    await promise;
+
+    expect(console.error).toHaveBeenCalledWith("Execution error: ", expect.any(Error));
+    expect(mockExit).toHaveBeenCalledWith(1);
+    mockExit.mockRestore();
+    jest.useRealTimers();
+  });
+
   it("should log warnings and retry on Discord webhook fetch error", async () => {
     jest.useFakeTimers();
     jest.spyOn(console, "warn").mockImplementation(() => {});
