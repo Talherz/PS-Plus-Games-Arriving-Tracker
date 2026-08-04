@@ -9,10 +9,19 @@ const PREMIUM_SEARCH_OFFSET = 800;
 
 function isValidWebhookUrl(url) {
   if (!url) return false;
-  return (
-    url.startsWith("https://discord.com/api/webhooks/") ||
-    url.startsWith("https://discordapp.com/api/webhooks/")
-  );
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:") return false;
+    if (
+      parsedUrl.hostname !== "discord.com" &&
+      parsedUrl.hostname !== "discordapp.com"
+    ) {
+      return false;
+    }
+    return parsedUrl.pathname.startsWith("/api/webhooks/");
+  } catch (e) {
+    return false;
+  }
 }
 
 if (require.main === module) {
