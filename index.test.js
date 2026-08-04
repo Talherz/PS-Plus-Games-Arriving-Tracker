@@ -34,6 +34,25 @@ describe("isValidWebhookUrl", () => {
       false,
     );
     expect(isValidWebhookUrl("discord.com/api/webhooks/123/abc")).toBe(false);
+
+    // Path traversal test
+    expect(
+      isValidWebhookUrl("https://discord.com/api/webhooks/../../users/@me"),
+    ).toBe(false);
+    expect(
+      isValidWebhookUrl("https://discord.com/api/webhooks/../../../users/@me"),
+    ).toBe(false);
+
+    // Invalid hostnames
+    expect(
+      isValidWebhookUrl("https://discord.com.evil.com/api/webhooks/123/abc"),
+    ).toBe(false);
+    expect(
+      isValidWebhookUrl("https://discordapp.com.evil.com/api/webhooks/123/abc"),
+    ).toBe(false);
+    expect(
+      isValidWebhookUrl("https://evil.discord.com/api/webhooks/123/abc"),
+    ).toBe(false);
   });
 
   it("should return false for empty or null inputs", () => {
@@ -250,7 +269,9 @@ describe("checkOfficialPSPlusFeed", () => {
 
     await checkOfficialPSPlusFeed();
 
-    expect(console.error).toHaveBeenCalledWith("Aborting: PS Blog returned error 500");
+    expect(console.error).toHaveBeenCalledWith(
+      "Aborting: PS Blog returned error 500",
+    );
   });
 
   it("should handle response size limit (content-length header)", async () => {
@@ -262,7 +283,9 @@ describe("checkOfficialPSPlusFeed", () => {
 
     await checkOfficialPSPlusFeed();
 
-    expect(console.error).toHaveBeenCalledWith("Aborting: Response size exceeds limit");
+    expect(console.error).toHaveBeenCalledWith(
+      "Aborting: Response size exceeds limit",
+    );
   });
 
   it("should handle streaming size limit exceeded", async () => {
@@ -278,7 +301,11 @@ describe("checkOfficialPSPlusFeed", () => {
 
     await checkOfficialPSPlusFeed();
 
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("Aborting: Error reading stream - Response body exceeds size limit"));
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Aborting: Error reading stream - Response body exceeds size limit",
+      ),
+    );
   });
 
   it("should handle invalid RSS XML structure", async () => {
@@ -294,7 +321,9 @@ describe("checkOfficialPSPlusFeed", () => {
 
     await checkOfficialPSPlusFeed();
 
-    expect(console.error).toHaveBeenCalledWith("Aborting: XML response does not contain valid RSS feed structure.");
+    expect(console.error).toHaveBeenCalledWith(
+      "Aborting: XML response does not contain valid RSS feed structure.",
+    );
   });
 
   it("should log error on loading state failure other than ENOENT", async () => {
@@ -313,7 +342,10 @@ describe("checkOfficialPSPlusFeed", () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
 
     await checkOfficialPSPlusFeed();
-    expect(console.error).toHaveBeenCalledWith("Error parsing STATE_FILE, using default state:", "Permission denied");
+    expect(console.error).toHaveBeenCalledWith(
+      "Error parsing STATE_FILE, using default state:",
+      "Permission denied",
+    );
   });
 
   it("should process Catalog games and update state", async () => {
@@ -331,23 +363,32 @@ describe("checkOfficialPSPlusFeed", () => {
       return Promise.resolve({ ok: true }); // Discord mock
     });
 
-    jest.spyOn(fsPromises, "readFile").mockResolvedValue(JSON.stringify({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" }));
+    jest
+      .spyOn(fsPromises, "readFile")
+      .mockResolvedValue(
+        JSON.stringify({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" }),
+      );
 
     await checkOfficialPSPlusFeed();
-    expect(fsPromises.writeFile).toHaveBeenCalledWith(expect.stringContaining("saved_state.json.tmp"), expect.stringContaining("test-guid-catalog"));
+    expect(fsPromises.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining("saved_state.json.tmp"),
+      expect.stringContaining("test-guid-catalog"),
+    );
   });
 
   it("should catch and log fetch timeout error correctly", async () => {
     jest.useFakeTimers();
     global.fetch = jest.fn().mockRejectedValue({ name: "AbortError" });
-    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    const mockExit = jest.spyOn(process, "exit").mockImplementation(() => {});
     jest.spyOn(console, "error").mockImplementation(() => {});
 
     const promise = checkOfficialPSPlusFeed();
     await jest.runAllTimersAsync();
     await promise;
 
-    expect(console.error).toHaveBeenCalledWith("Execution error: Fetch request to PS Blog timed out.");
+    expect(console.error).toHaveBeenCalledWith(
+      "Execution error: Fetch request to PS Blog timed out.",
+    );
     expect(mockExit).toHaveBeenCalledWith(1);
     mockExit.mockRestore();
     jest.useRealTimers();
@@ -356,14 +397,17 @@ describe("checkOfficialPSPlusFeed", () => {
   it("should catch and log other execution errors correctly", async () => {
     jest.useFakeTimers();
     global.fetch = jest.fn().mockRejectedValue(new Error("Some random error"));
-    const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    const mockExit = jest.spyOn(process, "exit").mockImplementation(() => {});
     jest.spyOn(console, "error").mockImplementation(() => {});
 
     const promise = checkOfficialPSPlusFeed();
     await jest.runAllTimersAsync();
     await promise;
 
-    expect(console.error).toHaveBeenCalledWith("Execution error: ", expect.any(Error));
+    expect(console.error).toHaveBeenCalledWith(
+      "Execution error: ",
+      expect.any(Error),
+    );
     expect(mockExit).toHaveBeenCalledWith(1);
     mockExit.mockRestore();
     jest.useRealTimers();
