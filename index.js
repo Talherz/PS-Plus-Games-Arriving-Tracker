@@ -198,13 +198,19 @@ async function checkOfficialPSPlusFeed() {
   }
 }
 
+const HTML_ENTITIES = {
+  "&#8211;": "-",
+  "&#8212;": "-",
+  "&#8217;": "'",
+  "&amp;": "&",
+  "&nbsp;": " ",
+};
+const HTML_ENTITY_REGEX = /&#8211;|&#8212;|&#8217;|&amp;|&nbsp;/g;
+
 function decodeHtmlEntities(text) {
-  return String(text)
-    .replace(/&#8211;/g, "-")
-    .replace(/&#8212;/g, "-")
-    .replace(/&#8217;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&nbsp;/g, " ");
+  const str = String(text);
+  if (str.indexOf("&") === -1) return str;
+  return str.replace(HTML_ENTITY_REGEX, (match) => HTML_ENTITIES[match]);
 }
 
 function isolateGameString(rawLine) {
