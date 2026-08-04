@@ -57,18 +57,20 @@ async function fetchPlayStationBlogFeed() {
     return null;
   }
 
-  let xmlData = "";
   let size = 0;
   const decoder = new TextDecoder("utf-8");
+  const chunks = [];
+  let xmlData = "";
   try {
     for await (const chunk of response.body) {
       size += chunk.length;
       if (size > MAX_SIZE) {
         throw new Error("Response body exceeds size limit");
       }
-      xmlData += decoder.decode(chunk, { stream: true });
+      chunks.push(decoder.decode(chunk, { stream: true }));
     }
-    xmlData += decoder.decode();
+    chunks.push(decoder.decode());
+    xmlData = chunks.join("");
   } catch (error) {
     clearTimeout(timeoutId);
     console.error(`Aborting: Error reading stream - ${error.message}`);
