@@ -8,6 +8,7 @@ const {
   isValidWebhookUrl,
   checkOfficialPSPlusFeed,
   processBlogContent,
+  loadMemoryState,
 } = require("./index");
 
 describe("isValidWebhookUrl", () => {
@@ -205,6 +206,31 @@ describe("extractGameList", () => {
     expect(extractGameList("", "")).toEqual([]);
   });
 });
+describe("loadMemoryState", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("should handle missing saved state file (ENOENT) and return default state without logging an error", async () => {
+    const error = new Error("ENOENT: no such file or directory");
+    error.code = "ENOENT";
+    jest.spyOn(fsPromises, "readFile").mockRejectedValue(error);
+
+    const result = await loadMemoryState();
+
+    expect(fsPromises.readFile).toHaveBeenCalledWith(
+      expect.any(String),
+      "utf8",
+    );
+    expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
+    expect(console.error).not.toHaveBeenCalled();
+  });
+});
+
 describe("checkOfficialPSPlusFeed", () => {
   let originalFetch;
 
