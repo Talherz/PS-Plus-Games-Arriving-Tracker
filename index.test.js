@@ -599,4 +599,32 @@ describe("processBlogContent", () => {
 
     jest.useRealTimers();
   });
+
+  it("should return false and log error on non-200 and non-429 Discord response", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        status: 400,
+        text: () => Promise.resolve("Bad Request: Invalid format"),
+      }),
+    );
+
+    const post = {
+      title: "PlayStation Plus Game Catalog for January",
+      link: "https://blog.playstation.com/catalog",
+      guid: "catalog-123",
+      content: "<p>Content</p>",
+    };
+
+    const result = await processBlogContent(post, "Catalog");
+
+    expect(result).toBe(false);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
+      "❌ DISCORD REJECTED IT! Error code: 400",
+    );
+    expect(console.error).toHaveBeenCalledWith(
+      "Reason: Bad Request: Invalid format",
+    );
+  });
 });
