@@ -42,6 +42,45 @@ if (require.main === module) {
 const STATE_FILE = "saved_state.json";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function readStream(response, maxSize, timeoutId) {
+  let size = 0;
+  const decoder = new TextDecoder("utf-8");
+  const chunks = [];
+  try {
+    for await (const chunk of response.body) {
+      size += chunk.length;
+      if (size > maxSize) {
+        throw new Error("Response body exceeds size limit");
+      }
+      chunks.push(decoder.decode(chunk, { stream: true }));
+    }
+    chunks.push(decoder.decode());
+    return chunks.join("");
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error(`Aborting: Error reading stream - ${error.message}`);
+    return null;
+  }
+}
+
+function parseRssXml(xmlData) {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    textNodeName: "text",
+  });
+
+  const xmlDoc = parser.parse(xmlData);
+  const items = xmlDoc?.rss?.channel?.item;
+
+  if (!items) {
+    console.error(
+      "Aborting: XML response does not contain valid RSS feed structure.",
+    );
+    return null;
+  }
+  return Array.isArray(items) ? items : [items];
+}
+
 async function fetchPlayStationBlogFeed() {
   const cacheBuster = Date.now();
   const rssUrl = `https://blog.playstation.com/category/ps-plus/feed/?cb=${cacheBuster}`;
@@ -66,42 +105,13 @@ async function fetchPlayStationBlogFeed() {
     return null;
   }
 
-  let size = 0;
-  const decoder = new TextDecoder("utf-8");
-  const chunks = [];
-  let xmlData = "";
-  try {
-    for await (const chunk of response.body) {
-      size += chunk.length;
-      if (size > MAX_SIZE) {
-        throw new Error("Response body exceeds size limit");
-      }
-      chunks.push(decoder.decode(chunk, { stream: true }));
-    }
-    chunks.push(decoder.decode());
-    xmlData = chunks.join("");
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.error(`Aborting: Error reading stream - ${error.message}`);
-    return null;
-  }
+  const xmlData = await readStream(response, MAX_SIZE, timeoutId);
+  if (!xmlData) return null;
 
   clearTimeout(timeoutId);
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    textNodeName: "text",
-  });
 
-  const xmlDoc = parser.parse(xmlData);
-  const items = xmlDoc?.rss?.channel?.item;
-
-  if (!items) {
-    console.error(
-      "Aborting: XML response does not contain valid RSS feed structure.",
-    );
-    return null;
-  }
-  const itemList = Array.isArray(items) ? items : [items];
+  const itemList = parseRssXml(xmlData);
+  if (!itemList) return null;
 
   console.log(`Successfully loaded ${itemList.length} posts natively.`);
   return itemList;
