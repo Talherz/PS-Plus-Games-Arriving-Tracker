@@ -439,7 +439,7 @@ function formatDiscordMessage(post, parsedContent) {
     username: "Talherz Waifu",
     content: messageContent,
     embeds: [embedData],
-    allowed_mentions: ROLE_ID ? { roles: [ROLE_ID] } : { parse: ["everyone"] },
+    allowed_mentions: ROLE_ID ? { roles: [ROLE_ID] } : { parse: [] },
   };
 
   return payload;
