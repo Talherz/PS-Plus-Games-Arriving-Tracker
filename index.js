@@ -306,108 +306,121 @@ function formatListText(gameArray) {
   return `${formattedLines.join("\n")}\n`;
 }
 
-function parseBlogContent(post, type) {
-  let embedColor = 0;
-  let messageContent = "";
-  let tierText = "";
+function parseCatalogContent(postContentStr, postTitle) {
+  let safeHtml = postContentStr.replace(
+    /Extra (?:and|&) Premium/gi,
+    "Extra_And_Premium",
+  );
 
-  const postContentStr = String(post.content);
+  let blocks = [safeHtml];
+  let splitIndex = -1;
 
-  if (type === "Catalog") {
-    embedColor = 3447003;
-    let safeHtml = postContentStr.replace(
-      /Extra (?:and|&) Premium/gi,
-      "Extra_And_Premium",
-    );
+  const headingRegex = /<(h[1-4]|p)[^>]*>([\s\S]*?)<\/\1>/gi;
+  let match;
+  let headerMatchIndex = -1;
+  let paragraphMatchIndex = -1;
 
-    let blocks = [safeHtml];
-    let splitIndex = -1;
+  while ((match = headingRegex.exec(safeHtml)) !== null) {
+    const tagName = match[1].toLowerCase();
+    const innerHtml = match[2];
 
-    const headingRegex = /<(h[1-4]|p)[^>]*>([\s\S]*?)<\/\1>/gi;
-    let match;
-    let headerMatchIndex = -1;
-    let paragraphMatchIndex = -1;
+    if (!/Premium/i.test(innerHtml)) continue;
 
-    while ((match = headingRegex.exec(safeHtml)) !== null) {
-      const tagName = match[1].toLowerCase();
-      const innerHtml = match[2];
+    const textContent = innerHtml.replace(/<[^>]*>?/gm, "");
 
-      if (!/Premium/i.test(innerHtml)) continue;
-
-      const textContent = innerHtml.replace(/<[^>]*>?/gm, "");
-
-      if (/Premium/i.test(textContent)) {
-        if (tagName.startsWith("h")) {
-          // If we found a header, record it and break immediately
-          headerMatchIndex = match.index;
-          break;
-        } else if (tagName === "p" && paragraphMatchIndex === -1) {
-          // Check if Premium is in a strong tag, and only record the first occurrence
-          const strongRegex = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
-          let strongMatch;
-          let found = false;
-          while ((strongMatch = strongRegex.exec(innerHtml)) !== null) {
-            const strongText = strongMatch[1].replace(/<[^>]*>?/gm, "");
-            if (/Premium/i.test(strongText)) {
-              found = true;
-              break;
-            }
+    if (/Premium/i.test(textContent)) {
+      if (tagName.startsWith("h")) {
+        // If we found a header, record it and break immediately
+        headerMatchIndex = match.index;
+        break;
+      } else if (tagName === "p" && paragraphMatchIndex === -1) {
+        // Check if Premium is in a strong tag, and only record the first occurrence
+        const strongRegex = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
+        let strongMatch;
+        let found = false;
+        while ((strongMatch = strongRegex.exec(innerHtml)) !== null) {
+          const strongText = strongMatch[1].replace(/<[^>]*>?/gm, "");
+          if (/Premium/i.test(strongText)) {
+            found = true;
+            break;
           }
-          if (found) {
-            paragraphMatchIndex = match.index;
-          }
+        }
+        if (found) {
+          paragraphMatchIndex = match.index;
         }
       }
     }
+  }
 
-    if (headerMatchIndex !== -1) {
-      splitIndex = headerMatchIndex;
-    } else if (paragraphMatchIndex !== -1) {
-      splitIndex = paragraphMatchIndex;
+  if (headerMatchIndex !== -1) {
+    splitIndex = headerMatchIndex;
+  } else if (paragraphMatchIndex !== -1) {
+    splitIndex = paragraphMatchIndex;
+  }
+
+  if (splitIndex !== -1) {
+    blocks = [
+      safeHtml.substring(0, splitIndex),
+      safeHtml.substring(splitIndex),
+    ];
+  } else {
+    splitIndex = safeHtml.indexOf(
+      "PlayStation Plus Premium",
+      PREMIUM_SEARCH_OFFSET,
+    );
+    if (splitIndex === -1) {
+      splitIndex = safeHtml.indexOf(
+        "Premium | Classics",
+        PREMIUM_SEARCH_OFFSET,
+      );
     }
-
     if (splitIndex !== -1) {
       blocks = [
         safeHtml.substring(0, splitIndex),
         safeHtml.substring(splitIndex),
       ];
-    } else {
-      splitIndex = safeHtml.indexOf(
-        "PlayStation Plus Premium",
-        PREMIUM_SEARCH_OFFSET,
-      );
-      if (splitIndex === -1) {
-        splitIndex = safeHtml.indexOf(
-          "Premium | Classics",
-          PREMIUM_SEARCH_OFFSET,
-        );
-      }
-      if (splitIndex !== -1) {
-        blocks = [
-          safeHtml.substring(0, splitIndex),
-          safeHtml.substring(splitIndex),
-        ];
-      }
     }
+  }
 
-    let extraBlock = blocks[0] || "";
-    let premiumBlock = blocks[1] || "";
-    let extraGames = extractGameList(extraBlock, post.title);
-    let premiumGames = extractGameList(premiumBlock, "");
+  let extraBlock = blocks[0] || "";
+  let premiumBlock = blocks[1] || "";
+  let extraGames = extractGameList(extraBlock, postTitle);
+  let premiumGames = extractGameList(premiumBlock, "");
 
-    messageContent = `${MENTION_TEXT} 🌟 **New PS Plus Game Catalog Update!**\n\n`;
-    messageContent += `🟦 **EXTRA:**\n${formatListText(extraGames)}\n`;
+  let messageContent = `${MENTION_TEXT} 🌟 **New PS Plus Game Catalog Update!**\n\n`;
+  messageContent += `🟦 **EXTRA:**\n${formatListText(extraGames)}\n`;
 
-    if (premiumGames.length > 0) {
-      messageContent += `🟪 **PREMIUM:**\n${formatListText(premiumGames)}`;
-    }
-    tierText = "Click the blog link below to see platform details (PS4/PS5).";
+  if (premiumGames.length > 0) {
+    messageContent += `🟪 **PREMIUM:**\n${formatListText(premiumGames)}`;
+  }
+
+  return {
+    embedColor: 3447003,
+    messageContent,
+    tierText: "Click the blog link below to see platform details (PS4/PS5).",
+  };
+}
+
+function parseEssentialContent(postContentStr, postTitle) {
+  let essentialGames = extractGameList(postContentStr, postTitle);
+  let messageContent = `${MENTION_TEXT} 🚨 **New PS Plus Essential Games Announced!**\n\n`;
+  messageContent += `🟨 **MONTHLY GAMES:**\n${formatListText(essentialGames)}`;
+
+  return {
+    embedColor: 16766720,
+    messageContent,
+    tierText: "Click the blog link for full details.",
+  };
+}
+
+function parseBlogContent(post, type) {
+  const postContentStr = String(post.content);
+
+  let parsedData;
+  if (type === "Catalog") {
+    parsedData = parseCatalogContent(postContentStr, post.title);
   } else {
-    embedColor = 16766720;
-    let essentialGames = extractGameList(postContentStr, post.title);
-    messageContent = `${MENTION_TEXT} 🚨 **New PS Plus Essential Games Announced!**\n\n`;
-    messageContent += `🟨 **MONTHLY GAMES:**\n${formatListText(essentialGames)}`;
-    tierText = "Click the blog link for full details.";
+    parsedData = parseEssentialContent(postContentStr, post.title);
   }
 
   let imageUrl = "";
@@ -416,7 +429,7 @@ function parseBlogContent(post, type) {
   );
   if (imgMatch) imageUrl = imgMatch[1];
 
-  return { messageContent, embedColor, tierText, imageUrl };
+  return { ...parsedData, imageUrl };
 }
 
 function formatDiscordMessage(post, parsedContent) {
