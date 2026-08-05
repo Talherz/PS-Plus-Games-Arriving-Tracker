@@ -600,6 +600,31 @@ describe("processBlogContent", () => {
     jest.useRealTimers();
   });
 
+  it("should return false and log error on Discord 429 rate limit with long Retry-After", async () => {
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: false,
+        status: 429,
+        headers: new Headers({ "Retry-After": "300" }),
+      }),
+    );
+
+    const post = {
+      title: "PlayStation Plus Game Catalog for January",
+      link: "https://blog.playstation.com/catalog",
+      guid: "catalog-123",
+      content: "<p>Content</p>",
+    };
+
+    const result = await processBlogContent(post, "Catalog");
+
+    expect(result).toBe(false);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
+      "❌ Discord rate limit is too long (300s). Aborting attempt.",
+    );
+  });
+
   it("should return false and log error on non-200 and non-429 Discord response", async () => {
     global.fetch = jest.fn(() =>
       Promise.resolve({
