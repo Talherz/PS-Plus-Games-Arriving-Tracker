@@ -468,22 +468,32 @@ function formatDiscordMessage(post, parsedContent) {
   return payload;
 }
 
+async function sendWebhookRequest(payload) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    return { res, error: null };
+  } catch (error) {
+    return { res: null, error };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function executeWebhookWithRetry(payload, title) {
   console.log(`Attempting to send alert to Discord for: ${title}`);
 
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const { res, error } = await sendWebhookRequest(payload);
 
-    let res;
-    try {
-      res = await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-    } catch (error) {
+    if (error) {
       if (error.name === "AbortError") {
         console.warn(
           `⚠️ Discord webhook fetch timed out (attempt ${attempt}/3)`,
@@ -498,8 +508,6 @@ async function executeWebhookWithRetry(payload, title) {
         continue;
       }
       return false;
-    } finally {
-      clearTimeout(timeoutId);
     }
 
     if (res.ok) {
