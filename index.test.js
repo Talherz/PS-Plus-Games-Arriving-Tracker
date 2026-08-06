@@ -54,6 +54,23 @@ describe("isValidWebhookUrl", () => {
     expect(
       isValidWebhookUrl("https://evil.discord.com/api/webhooks/123/abc"),
     ).toBe(false);
+
+    // Invalid paths under /api/webhooks/
+    expect(isValidWebhookUrl("https://discord.com/api/webhooks/123")).toBe(
+      false,
+    );
+    expect(isValidWebhookUrl("https://discord.com/api/webhooks/123/")).toBe(
+      false,
+    );
+    expect(
+      isValidWebhookUrl("https://discord.com/api/webhooks/123/abc/extra"),
+    ).toBe(false);
+    expect(isValidWebhookUrl("https://discord.com/api/webhooks/abc/123")).toBe(
+      false,
+    );
+    expect(
+      isValidWebhookUrl("https://discord.com/api/webhooks/123/abc@def"),
+    ).toBe(false);
   });
 
   it("should return false for empty or null inputs", () => {

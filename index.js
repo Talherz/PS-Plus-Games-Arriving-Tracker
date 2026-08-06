@@ -18,7 +18,7 @@ function isValidWebhookUrl(url) {
     ) {
       return false;
     }
-    return parsedUrl.pathname.startsWith("/api/webhooks/");
+    return /^\/api\/webhooks\/\d+\/[\w-]+$/.test(parsedUrl.pathname);
   } catch (e) {
     return false;
   }
