@@ -319,7 +319,7 @@ function formatListText(gameArray) {
 function parseCatalogContent(postContentStr, postTitle) {
   let safeHtml = postContentStr.replace(
     /Extra (?:and|&) Premium/gi,
-    "Extra_And_Premium",
+    "Extra_And_Prem",
   );
 
   let blocks = [safeHtml];
