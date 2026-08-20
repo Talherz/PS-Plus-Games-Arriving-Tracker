@@ -478,6 +478,7 @@ async function sendWebhookRequest(payload) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: controller.signal,
+      redirect: "error",
     });
     return { res, error: null };
   } catch (error) {
