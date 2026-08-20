@@ -18,7 +18,10 @@ function isValidWebhookUrl(url) {
     ) {
       return false;
     }
-    return parsedUrl.pathname.startsWith("/api/webhooks/");
+
+    // Strict regex check to prevent path traversal via encoded characters like ..%2f
+    const decodedPath = decodeURIComponent(parsedUrl.pathname);
+    return /^\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(decodedPath);
   } catch (e) {
     return false;
   }

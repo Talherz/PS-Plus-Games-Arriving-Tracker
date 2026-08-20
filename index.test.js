@@ -43,6 +43,14 @@ describe("isValidWebhookUrl", () => {
     expect(
       isValidWebhookUrl("https://discord.com/api/webhooks/../../../users/@me"),
     ).toBe(false);
+    expect(
+      isValidWebhookUrl(
+        "https://discord.com/api/webhooks/123/..%2f..%2fusers/@me",
+      ),
+    ).toBe(false);
+    expect(
+      isValidWebhookUrl("https://discord.com/api/webhooks/..%2f..%2fusers/@me"),
+    ).toBe(false);
 
     // Invalid hostnames
     expect(
