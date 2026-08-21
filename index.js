@@ -563,4 +563,5 @@ module.exports = {
   checkOfficialPSPlusFeed,
   processBlogContent,
   loadMemoryState,
+  saveMemoryState,
 };
