@@ -8,6 +8,8 @@ const MENTION_TEXT = ROLE_ID ? `<@&${ROLE_ID}>` : "@everyone";
 const PREMIUM_SEARCH_OFFSET = 800;
 const STRONG_REGEX = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
 const PREMIUM_REGEX = /Premium/i;
+const LI_TAG_REGEX = /<li>(.*?)<\/li>/g;
+const BLOCK_TAGS_REGEX = /<\/?(p|br|li|h[1-6]|div)[^>]*>/gi;
 const HTML_TAGS_REGEX = /<[^>]*>?/gm;
 
 function isValidWebhookUrl(url) {
@@ -252,11 +254,8 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
 
   let decodedHtml = decodeHtmlEntities(htmlBlock);
 
-  let textWithNewlines = decodedHtml.replace(
-    /<\/?(p|br|li|h[1-6]|div)[^>]*>/gi,
-    "\n",
-  );
-  let cleanText = textWithNewlines.replace(/<[^>]*>?/gm, "");
+  let textWithNewlines = decodedHtml.replace(BLOCK_TAGS_REGEX, "\n");
+  let cleanText = textWithNewlines.replace(HTML_TAGS_REGEX, "");
   let lines = cleanText.split("\n");
 
   for (let i = 0; i < lines.length; i++) {
@@ -270,8 +269,8 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
   }
 
   if (extractedGames.size === 0) {
-    for (const match of decodedHtml.matchAll(/<li>(.*?)<\/li>/g)) {
-      let rawText = match[1].replace(/<[^>]*>?/gm, "").trim();
+    for (const match of decodedHtml.matchAll(LI_TAG_REGEX)) {
+      let rawText = match[1].replace(HTML_TAGS_REGEX, "").trim();
       let gameString = isolateGameString(rawText);
 
       if (
