@@ -6,6 +6,7 @@ const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const ROLE_ID = process.env.DISCORD_ROLE_ID;
 const MENTION_TEXT = ROLE_ID ? `<@&${ROLE_ID}>` : "@everyone";
 const PREMIUM_SEARCH_OFFSET = 800;
+const STRONG_REGEX = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
 
 function isValidWebhookUrl(url) {
   if (!url) return false;
@@ -348,10 +349,10 @@ function parseCatalogContent(postContentStr, postTitle) {
         break;
       } else if (tagName === "p" && paragraphMatchIndex === -1) {
         // Check if Premium is in a strong tag, and only record the first occurrence
-        const strongRegex = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
+        STRONG_REGEX.lastIndex = 0;
         let strongMatch;
         let found = false;
-        while ((strongMatch = strongRegex.exec(innerHtml)) !== null) {
+        while ((strongMatch = STRONG_REGEX.exec(innerHtml)) !== null) {
           const strongText = strongMatch[1].replace(/<[^>]*>?/gm, "");
           if (/Premium/i.test(strongText)) {
             found = true;
