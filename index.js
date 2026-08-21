@@ -7,6 +7,8 @@ const ROLE_ID = process.env.DISCORD_ROLE_ID;
 const MENTION_TEXT = ROLE_ID ? `<@&${ROLE_ID}>` : "@everyone";
 const PREMIUM_SEARCH_OFFSET = 800;
 const STRONG_REGEX = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
+const PREMIUM_REGEX = /Premium/i;
+const HTML_TAGS_REGEX = /<[^>]*>?/gm;
 
 function isValidWebhookUrl(url) {
   if (!url) return false;
@@ -338,11 +340,11 @@ function parseCatalogContent(postContentStr, postTitle) {
     const tagName = match[1].toLowerCase();
     const innerHtml = match[2];
 
-    if (!/Premium/i.test(innerHtml)) continue;
+    if (!PREMIUM_REGEX.test(innerHtml)) continue;
 
-    const textContent = innerHtml.replace(/<[^>]*>?/gm, "");
+    const textContent = innerHtml.replace(HTML_TAGS_REGEX, "");
 
-    if (/Premium/i.test(textContent)) {
+    if (PREMIUM_REGEX.test(textContent)) {
       if (tagName.startsWith("h")) {
         // If we found a header, record it and break immediately
         headerMatchIndex = match.index;
@@ -353,8 +355,8 @@ function parseCatalogContent(postContentStr, postTitle) {
         let strongMatch;
         let found = false;
         while ((strongMatch = STRONG_REGEX.exec(innerHtml)) !== null) {
-          const strongText = strongMatch[1].replace(/<[^>]*>?/gm, "");
-          if (/Premium/i.test(strongText)) {
+          const strongText = strongMatch[1].replace(HTML_TAGS_REGEX, "");
+          if (PREMIUM_REGEX.test(strongText)) {
             found = true;
             break;
           }
