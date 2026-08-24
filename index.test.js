@@ -238,6 +238,40 @@ describe("loadMemoryState", () => {
     expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
     expect(console.error).not.toHaveBeenCalled();
   });
+
+  it("should log an error and return default state when read fails with non-ENOENT error", async () => {
+    const error = new Error("Permission denied");
+    error.code = "EACCES";
+    jest.spyOn(fsPromises, "readFile").mockRejectedValue(error);
+
+    const result = await loadMemoryState();
+
+    expect(fsPromises.readFile).toHaveBeenCalledWith(
+      expect.any(String),
+      "utf8",
+    );
+    expect(console.error).toHaveBeenCalledWith(
+      "Error parsing STATE_FILE, using default state:",
+      "Permission denied",
+    );
+    expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
+  });
+
+  it("should log an error and return default state when JSON parsing fails", async () => {
+    jest.spyOn(fsPromises, "readFile").mockResolvedValue("invalid json");
+
+    const result = await loadMemoryState();
+
+    expect(fsPromises.readFile).toHaveBeenCalledWith(
+      expect.any(String),
+      "utf8",
+    );
+    expect(console.error).toHaveBeenCalledWith(
+      "Error parsing STATE_FILE, using default state:",
+      expect.stringContaining("Unexpected token"),
+    );
+    expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
+  });
 });
 
 describe("saveMemoryState", () => {
