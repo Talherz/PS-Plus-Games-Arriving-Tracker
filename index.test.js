@@ -9,6 +9,7 @@ const {
   checkOfficialPSPlusFeed,
   processBlogContent,
   loadMemoryState,
+  saveMemoryState,
 } = require("./index");
 
 describe("isValidWebhookUrl", () => {
@@ -236,6 +237,47 @@ describe("loadMemoryState", () => {
     );
     expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
     expect(console.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("saveMemoryState", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("should write state to a temp file and rename it", async () => {
+    jest.spyOn(fsPromises, "writeFile").mockResolvedValue();
+    jest.spyOn(fsPromises, "rename").mockResolvedValue();
+
+    const state = { LAST_ESSENTIAL_ID: "123", LAST_CATALOG_ID: "456" };
+    await saveMemoryState(state);
+
+    expect(fsPromises.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining(".tmp"),
+      JSON.stringify(state, null, 2),
+    );
+    expect(fsPromises.rename).toHaveBeenCalledWith(
+      expect.stringContaining(".tmp"),
+      expect.any(String),
+    );
+    expect(console.log).toHaveBeenCalledWith("Memory state updated.");
+  });
+
+  it("should propagate errors if writeFile fails", async () => {
+    const error = new Error("Write failed");
+    jest.spyOn(fsPromises, "writeFile").mockRejectedValue(error);
+    jest.spyOn(fsPromises, "rename").mockResolvedValue();
+
+    const state = { LAST_ESSENTIAL_ID: "123", LAST_CATALOG_ID: "456" };
+
+    await expect(saveMemoryState(state)).rejects.toThrow("Write failed");
+
+    expect(fsPromises.writeFile).toHaveBeenCalled();
+    expect(fsPromises.rename).not.toHaveBeenCalled();
   });
 });
 
