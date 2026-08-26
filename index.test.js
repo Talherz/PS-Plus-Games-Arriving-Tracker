@@ -337,7 +337,7 @@ describe("checkOfficialPSPlusFeed", () => {
 
   it("should handle missing saved state file (ENOENT) without crashing", async () => {
     // Mock successful fetch to valid RSS XML
-    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-1</guid><description>Test Description</description></item></channel></rss>`;
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>PlayStation Plus Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-1</guid><description>Test Description</description></item></channel></rss>`;
     global.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
@@ -437,7 +437,7 @@ describe("checkOfficialPSPlusFeed", () => {
   });
 
   it("should log error on loading state failure other than ENOENT", async () => {
-    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-1</guid><description>Test Description</description></item></channel></rss>`;
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>PlayStation Plus Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-1</guid><description>Test Description</description></item></channel></rss>`;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       headers: new Headers(),
@@ -528,7 +528,7 @@ describe("checkOfficialPSPlusFeed", () => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
 
     // Mock successful fetch to valid RSS XML
-    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-new</guid><description>Test Description</description></item></channel></rss>`;
+    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>PlayStation Plus Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-new</guid><description>Test Description</description></item></channel></rss>`;
 
     global.fetch = jest.fn().mockImplementation((url) => {
       if (url && url.includes("playstation.com")) {
