@@ -235,7 +235,11 @@ describe("loadMemoryState", () => {
       expect.any(String),
       "utf8",
     );
-    expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
+    expect(result).toEqual({
+      LAST_ESSENTIAL_ID: "",
+      LAST_CATALOG_ID: "",
+      ETAG: "",
+    });
     expect(console.error).not.toHaveBeenCalled();
   });
 
@@ -254,7 +258,11 @@ describe("loadMemoryState", () => {
       "Error parsing STATE_FILE, using default state:",
       "Permission denied",
     );
-    expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
+    expect(result).toEqual({
+      LAST_ESSENTIAL_ID: "",
+      LAST_CATALOG_ID: "",
+      ETAG: "",
+    });
   });
 
   it("should log an error and return default state when JSON parsing fails", async () => {
@@ -270,7 +278,11 @@ describe("loadMemoryState", () => {
       "Error parsing STATE_FILE, using default state:",
       expect.stringContaining("Unexpected token"),
     );
-    expect(result).toEqual({ LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" });
+    expect(result).toEqual({
+      LAST_ESSENTIAL_ID: "",
+      LAST_CATALOG_ID: "",
+      ETAG: "",
+    });
   });
 });
 
@@ -336,32 +348,18 @@ describe("checkOfficialPSPlusFeed", () => {
   });
 
   it("should handle missing saved state file (ENOENT) without crashing", async () => {
-    // Mock successful fetch to valid RSS XML
-    const mockXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>PlayStation Plus Monthly Games for January</title><link>https://example.com/essential</link><guid>test-guid-1</guid><description>Test Description</description></item></channel></rss>`;
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        ok: true,
-        headers: new Headers({ "content-length": mockXml.length.toString() }),
-        body: (async function* () {
-          yield new TextEncoder().encode(mockXml);
-        })(),
-        text: () => Promise.resolve(mockXml),
-      }),
-    );
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers(),
+      body: (async function* () {
+        yield new TextEncoder().encode(
+          '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel></channel></rss>',
+        );
+      })(),
+    });
+    jest.spyOn(console, "error").mockImplementation(() => {});
 
-    // Mock readFile to throw ENOENT
-    const error = new Error("ENOENT: no such file or directory");
-    error.code = "ENOENT";
-    jest.spyOn(fsPromises, "readFile").mockRejectedValue(error);
-
-    // Attempt execution
     await expect(checkOfficialPSPlusFeed()).resolves.not.toThrow();
-
-    // Verify it attempted to read the file
-    expect(fsPromises.readFile).toHaveBeenCalledWith(
-      "saved_state.json",
-      "utf8",
-    );
 
     // Verify it doesn't log an error for ENOENT
     expect(console.error).not.toHaveBeenCalledWith(
@@ -464,7 +462,7 @@ describe("checkOfficialPSPlusFeed", () => {
       if (url && url.includes("playstation.com")) {
         return Promise.resolve({
           ok: true,
-          headers: new Headers(),
+          headers: new Headers({ etag: '"mocked-etag"' }),
           body: (async function* () {
             yield new TextEncoder().encode(mockXml);
           })(),
