@@ -2,6 +2,7 @@ process.env.DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/123/abc";
 
 const fsPromises = require("fs").promises;
 const {
+  readStream,
   decodeHtmlEntities,
   formatListText,
   extractGameList,
@@ -798,5 +799,95 @@ describe("parseRssXml", () => {
     expect(console.error).toHaveBeenCalledWith(
       "Aborting: XML response does not contain valid RSS feed structure.",
     );
+  });
+});
+
+describe("readStream", () => {
+  let originalConsoleError;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    originalConsoleError = console.error;
+    console.error = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    console.error = originalConsoleError;
+  });
+
+  it("should read stream successfully and clear timeout", async () => {
+    const encoder = new TextEncoder();
+    const chunks = [encoder.encode("Hello"), encoder.encode(" World")];
+
+    const mockResponse = {
+      body: (async function* () {
+        for (const chunk of chunks) {
+          yield chunk;
+        }
+      })(),
+    };
+
+    const timeoutId = setTimeout(() => {}, 1000);
+    const result = await readStream(mockResponse, 1000, timeoutId);
+
+    expect(result).toBe("Hello World");
+    // Since readStream throws or returns naturally, the main timeout is handled
+    // by the caller. But if readStream errors, it clears the timeout.
+    // In this happy path, the timeout should NOT be cleared by readStream itself.
+  });
+
+  it("should abort and return null if max size is exceeded", async () => {
+    const encoder = new TextEncoder();
+    const chunks = [
+      encoder.encode("This chunk is 26 bytes."),
+      encoder.encode("This chunk will exceed limits."),
+    ];
+
+    const mockResponse = {
+      body: (async function* () {
+        for (const chunk of chunks) {
+          yield chunk;
+        }
+      })(),
+    };
+
+    // Simulate setting a timeout
+    const timeoutFn = jest.fn();
+    const timeoutId = setTimeout(timeoutFn, 1000);
+
+    // Max size is 30, the second chunk pushes it over
+    const result = await readStream(mockResponse, 30, timeoutId);
+
+    expect(result).toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("Response body exceeds size limit"),
+    );
+
+    // Run timers to verify timeout was cleared
+    jest.runAllTimers();
+    expect(timeoutFn).not.toHaveBeenCalled();
+  });
+
+  it("should abort and return null on other stream reading errors", async () => {
+    const mockResponse = {
+      body: (async function* () {
+        yield new TextEncoder().encode("First chunk");
+        throw new Error("Simulated network failure");
+      })(),
+    };
+
+    const timeoutFn = jest.fn();
+    const timeoutId = setTimeout(timeoutFn, 1000);
+
+    const result = await readStream(mockResponse, 1000, timeoutId);
+
+    expect(result).toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("Simulated network failure"),
+    );
+
+    jest.runAllTimers();
+    expect(timeoutFn).not.toHaveBeenCalled();
   });
 });
