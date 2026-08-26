@@ -761,3 +761,42 @@ describe("processBlogContent", () => {
     );
   });
 });
+
+describe("parseRssXml", () => {
+  let parseRssXml;
+
+  beforeEach(() => {
+    parseRssXml = require("./index").parseRssXml;
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("should return an array of items for valid XML with a single item", () => {
+    const xmlData = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Test Game</title><link>https://example.com</link><guid>test-guid</guid><description>Test Description</description></item></channel></rss>`;
+    const result = parseRssXml(xmlData);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(1);
+    expect(result[0].title).toBe("Test Game");
+  });
+
+  it("should return an array of items for valid XML with multiple items", () => {
+    const xmlData = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item><title>Test Game 1</title><link>https://example.com/1</link><guid>test-guid-1</guid><description>Test Description 1</description></item><item><title>Test Game 2</title><link>https://example.com/2</link><guid>test-guid-2</guid><description>Test Description 2</description></item></channel></rss>`;
+    const result = parseRssXml(xmlData);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+    expect(result[0].title).toBe("Test Game 1");
+    expect(result[1].title).toBe("Test Game 2");
+  });
+
+  it("should return null and log an error for invalid XML input", () => {
+    const xmlData = `<?xml version="1.0" encoding="UTF-8"?><notrss></notrss>`;
+    const result = parseRssXml(xmlData);
+    expect(result).toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      "Aborting: XML response does not contain valid RSS feed structure.",
+    );
+  });
+});
