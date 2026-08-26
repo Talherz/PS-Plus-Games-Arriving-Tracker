@@ -89,21 +89,36 @@ function parseRssXml(xmlData) {
   return Array.isArray(items) ? items : [items];
 }
 
-async function fetchPlayStationBlogFeed() {
-  const cacheBuster = Date.now();
-  const rssUrl = `https://blog.playstation.com/feed/?cb=${cacheBuster}`;
+async function fetchPlayStationBlogFeed(etag = null) {
+  const rssUrl = `https://blog.playstation.com/feed/`;
 
   console.log("Fetching native RSS directly from PlayStation...");
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-  const response = await fetch(rssUrl, { signal: controller.signal });
+  const headers = {};
+  if (etag) {
+    headers["If-None-Match"] = etag;
+  }
+
+  const response = await fetch(rssUrl, {
+    headers,
+    signal: controller.signal,
+  });
+
+  if (response.status === 304) {
+    clearTimeout(timeoutId);
+    console.log("No new updates (304 Not Modified).");
+    return { itemList: [], newEtag: etag };
+  }
 
   if (!response.ok) {
     clearTimeout(timeoutId);
     console.error(`Aborting: PS Blog returned error ${response.status}`);
     return null;
   }
+
+  const newEtag = response.headers.get("etag");
 
   const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
   const contentLength = response.headers.get("content-length");
@@ -122,11 +137,11 @@ async function fetchPlayStationBlogFeed() {
   if (!itemList) return null;
 
   console.log(`Successfully loaded ${itemList.length} posts natively.`);
-  return itemList;
+  return { itemList, newEtag };
 }
 
 async function loadMemoryState() {
-  let state = { LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "" };
+  let state = { LAST_ESSENTIAL_ID: "", LAST_CATALOG_ID: "", ETAG: "" };
   try {
     const data = await fsPromises.readFile(STATE_FILE, "utf8");
     state = JSON.parse(data);
@@ -150,14 +165,30 @@ async function saveMemoryState(state) {
 
 async function checkOfficialPSPlusFeed() {
   try {
-    const itemList = await fetchPlayStationBlogFeed();
-    if (!itemList) return;
-
     let state = await loadMemoryState();
+
+    const fetchResult = await fetchPlayStationBlogFeed(state.ETAG);
+    if (!fetchResult) return;
+
+    const { itemList, newEtag } = fetchResult;
+
+    let stateChanged = false;
+
+    if (newEtag && newEtag !== state.ETAG) {
+      state.ETAG = newEtag;
+      stateChanged = true;
+    }
+
+    if (itemList.length === 0) {
+      // 304 Not Modified
+      if (stateChanged) {
+        await saveMemoryState(state);
+      }
+      return;
+    }
 
     let foundEssential = false;
     let foundCatalog = false;
-    let stateChanged = false;
 
     for (let i = 0; i < itemList.length; i++) {
       const item = itemList[i];

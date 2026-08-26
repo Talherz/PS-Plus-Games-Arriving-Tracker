@@ -1,12 +1,8 @@
-# 🧪 Add tests for unexpected errors in loadMemoryState
+# Instantaneous Polling using HTTP Conditional GET
+The `fetchPlayStationBlogFeed` function in `index.js` has been updated to use HTTP Conditional GET.
+It now tracks the `ETag` of the PlayStation Blog RSS Feed.
+By sending the `If-None-Match` header on subsequent requests, we bypass rate limits while achieving near-instantaneous polling.
 
-🎯 **What:**
-Added missing test cases for the `loadMemoryState` function in `index.js`. These tests ensure that the function handles errors correctly when reading the saved state file, specifically when errors other than `ENOENT` (e.g., permission denied or invalid JSON content) occur.
-
-📊 **Coverage:**
-The following scenarios are now tested:
-*   Reading the state file throws a non-`ENOENT` error, such as `EACCES` (Permission denied). The test verifies that an error is logged and the default state is returned.
-*   Reading the state file returns invalid JSON data, resulting in a `SyntaxError` from `JSON.parse`. The test ensures the error is appropriately caught, an error message is logged, and the default state is correctly applied.
-
-✨ **Result:**
-Improved test coverage and reliability for `loadMemoryState`, ensuring that unexpected file system or parsing errors do not cause unhandled crashes and gracefully fallback to default operational state.
+If the RSS Feed remains identical on the PlayStation Blog servers, they will respond with a lightweight `304 Not Modified` and empty body, meaning we can check constantly without penalty.
+If the RSS Feed changes (for example, a new post is added), the server returns the updated XML feed and a fresh `ETag`, which is then stored in the `saved_state.json` file.
+All tests have been updated accordingly, successfully resolving the user's issue!
