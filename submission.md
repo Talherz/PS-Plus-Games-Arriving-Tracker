@@ -1,8 +1,6 @@
-# Instantaneous Polling using HTTP Conditional GET
-The `fetchPlayStationBlogFeed` function in `index.js` has been updated to use HTTP Conditional GET.
-It now tracks the `ETag` of the PlayStation Blog RSS Feed.
-By sending the `If-None-Match` header on subsequent requests, we bypass rate limits while achieving near-instantaneous polling.
+Title: 🧪 Test missing `parseRssXml` functionality and invalid XML structures
 
-If the RSS Feed remains identical on the PlayStation Blog servers, they will respond with a lightweight `304 Not Modified` and empty body, meaning we can check constantly without penalty.
-If the RSS Feed changes (for example, a new post is added), the server returns the updated XML feed and a fresh `ETag`, which is then stored in the `saved_state.json` file.
-All tests have been updated accordingly, successfully resolving the user's issue!
+Description:
+🎯 **What:** The `parseRssXml` function in `index.js` lacked any direct unit test coverage, and its failure path for invalid XML was untested.
+📊 **Coverage:** Added test suite for `parseRssXml` with valid single, valid multiple, and invalid structures using assertions and console spying. Exported `parseRssXml` from `index.js` to facilitate testing.
+✨ **Result:** Improved test coverage and reliability for XML parsing logic.

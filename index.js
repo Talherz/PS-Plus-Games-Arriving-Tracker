@@ -601,6 +601,7 @@ module.exports = {
   isValidWebhookUrl,
   checkOfficialPSPlusFeed,
   processBlogContent,
+  parseRssXml,
   loadMemoryState,
   saveMemoryState,
 };
