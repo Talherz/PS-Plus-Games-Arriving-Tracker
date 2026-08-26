@@ -91,7 +91,7 @@ function parseRssXml(xmlData) {
 
 async function fetchPlayStationBlogFeed() {
   const cacheBuster = Date.now();
-  const rssUrl = `https://blog.playstation.com/category/ps-plus/feed/?cb=${cacheBuster}`;
+  const rssUrl = `https://blog.playstation.com/feed/?cb=${cacheBuster}`;
 
   console.log("Fetching native RSS directly from PlayStation...");
   const controller = new AbortController();
@@ -170,7 +170,11 @@ async function checkOfficialPSPlusFeed() {
             : item.link;
 
       // Essential Games
-      if (!foundEssential && titleLower.includes("monthly games for")) {
+      if (
+        !foundEssential &&
+        titleLower.includes("playstation plus") &&
+        titleLower.includes("monthly games")
+      ) {
         foundEssential = true;
         if (postId !== state.LAST_ESSENTIAL_ID) {
           const post = {
@@ -188,7 +192,11 @@ async function checkOfficialPSPlusFeed() {
       }
 
       // Catalog Games
-      if (!foundCatalog && titleLower.includes("game catalog for")) {
+      if (
+        !foundCatalog &&
+        titleLower.includes("playstation plus") &&
+        titleLower.includes("game catalog")
+      ) {
         foundCatalog = true;
         if (postId !== state.LAST_CATALOG_ID) {
           const post = {
