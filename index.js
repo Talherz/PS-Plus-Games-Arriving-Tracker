@@ -360,12 +360,7 @@ function formatListText(gameArray) {
   return `${formattedLines.join("\n")}\n`;
 }
 
-function parseCatalogContent(postContentStr, postTitle) {
-  let safeHtml = postContentStr.replace(
-    /Extra (?:and|&) Premium/gi,
-    "Extra_And_Prem",
-  );
-
+function splitCatalogBlocks(safeHtml) {
   let blocks = [safeHtml];
   let splitIndex = -1;
 
@@ -436,11 +431,10 @@ function parseCatalogContent(postContentStr, postTitle) {
     }
   }
 
-  let extraBlock = blocks[0] || "";
-  let premiumBlock = blocks[1] || "";
-  let extraGames = extractGameList(extraBlock, postTitle);
-  let premiumGames = extractGameList(premiumBlock, "");
+  return blocks;
+}
 
+function formatCatalogMessage(extraGames, premiumGames) {
   let messageContent = `${MENTION_TEXT} 🌟 **New PS Plus Game Catalog Update!**\n\n`;
   messageContent += `🟦 **EXTRA:**\n${formatListText(extraGames)}\n`;
 
@@ -453,6 +447,22 @@ function parseCatalogContent(postContentStr, postTitle) {
     messageContent,
     tierText: "Click the blog link below to see platform details (PS4/PS5).",
   };
+}
+
+function parseCatalogContent(postContentStr, postTitle) {
+  let safeHtml = postContentStr.replace(
+    /Extra (?:and|&) Premium/gi,
+    "Extra_And_Prem",
+  );
+
+  let blocks = splitCatalogBlocks(safeHtml);
+
+  let extraBlock = blocks[0] || "";
+  let premiumBlock = blocks[1] || "";
+  let extraGames = extractGameList(extraBlock, postTitle);
+  let premiumGames = extractGameList(premiumBlock, "");
+
+  return formatCatalogMessage(extraGames, premiumGames);
 }
 
 function parseEssentialContent(postContentStr, postTitle) {

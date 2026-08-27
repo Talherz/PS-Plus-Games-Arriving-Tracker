@@ -1,13 +1,18 @@
-# 🧪 Testing Improvement Task
+# 🧹 Refactor parseCatalogContent for improved maintainability
 
 ## 🎯 What
-The `sendWebhookRequest` function was missing test coverage for its error handling and timeout behaviors using the AbortController.
+The `parseCatalogContent` function in `index.js` was overly long and complex, handling both DOM-like parsing via regex and Discord message formatting within a single function. This PR splits the function into three distinct responsibilities:
+1. `splitCatalogBlocks(safeHtml)`: Handles the regex-based DOM splitting logic to isolate the Extra and Premium blocks.
+2. `formatCatalogMessage(extraGames, premiumGames)`: Handles constructing the Discord message content and final payload.
+3. `parseCatalogContent`: Acts as an orchestrator, stringing together string replacement, block splitting, game extraction, and message formatting.
 
-## 📊 Coverage
-The new tests cover the following scenarios for `sendWebhookRequest`:
-1. Successfully sending a webhook request and returning a null error.
-2. Handling fetch errors properly and returning the thrown error.
-3. Aborting the request appropriately when the fetch exceeds the 10000ms timeout, using `jest.useFakeTimers()` to simulate the passage of time without actually waiting.
+## 💡 Why
+Splitting this long function into smaller, focused functions improves readability and maintainability. It adheres to the Single Responsibility Principle, making it easier to test or modify the parsing logic separately from the formatting logic in the future.
+
+## ✅ Verification
+- Ensured `npm test` passes successfully.
+- Verified test coverage with `jest --coverage`.
+- Formatted the codebase using `npx prettier --write index.js`.
 
 ## ✨ Result
-Test coverage for network interactions and time-sensitive operations in the webhook sending logic has been improved and can now effectively catch issues related to error handling and timeouts in `sendWebhookRequest`.
+The complexity of `parseCatalogContent` has been significantly reduced, making the codebase cleaner and easier to maintain without changing any of the underlying logic or behavior.
