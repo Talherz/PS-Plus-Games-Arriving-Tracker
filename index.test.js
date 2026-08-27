@@ -2,6 +2,7 @@ process.env.DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/123/abc";
 
 const fsPromises = require("fs").promises;
 const {
+  sendWebhookRequest,
   readStream,
   decodeHtmlEntities,
   formatListText,
@@ -889,5 +890,71 @@ describe("readStream", () => {
 
     jest.runAllTimers();
     expect(timeoutFn).not.toHaveBeenCalled();
+  });
+});
+describe("sendWebhookRequest", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("should send a webhook request successfully", async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+
+    const promise = sendWebhookRequest({ content: "test" });
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "test" }),
+      }),
+    );
+    expect(result.res).toEqual({ ok: true });
+    expect(result.error).toBeNull();
+  });
+
+  it("should return error when fetch throws", async () => {
+    const error = new Error("Network error");
+    global.fetch.mockRejectedValueOnce(error);
+
+    const promise = sendWebhookRequest({ content: "test" });
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.res).toBeNull();
+    expect(result.error).toBe(error);
+  });
+
+  it("should abort the request if it times out", async () => {
+    const abortError = new Error("AbortError");
+    abortError.name = "AbortError";
+
+    global.fetch.mockImplementationOnce((url, { signal }) => {
+      return new Promise((resolve, reject) => {
+        if (signal.aborted) {
+          reject(abortError);
+        }
+        signal.addEventListener("abort", () => {
+          reject(abortError);
+        });
+      });
+    });
+
+    const promise = sendWebhookRequest({ content: "test" });
+    await jest.advanceTimersByTimeAsync(10000);
+    const result = await promise;
+
+    expect(result.res).toBeNull();
+    expect(result.error).toBe(abortError);
   });
 });

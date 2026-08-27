@@ -595,6 +595,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  sendWebhookRequest,
   readStream,
   decodeHtmlEntities,
   formatListText,
