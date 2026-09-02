@@ -1175,3 +1175,124 @@ describe("parseBlogContent", () => {
     expect(result.imageUrl).toBe("");
   });
 });
+
+describe("parseCatalogContent", () => {
+  const { parseCatalogContent } = require("./index");
+
+  it("should parse content with both Extra and Premium games correctly", () => {
+    const postTitle = "PlayStation Plus Game Catalog";
+    const postContentStr = `
+      <h2>PlayStation Plus Extra and Premium | Game Catalog</h2>
+      <ul>
+        <li>Extra Game 1 | PS4</li>
+        <li>Extra Game 2 | PS5</li>
+      </ul>
+      <h2>PlayStation Plus Premium</h2>
+      <ul>
+        <li>Premium Classic 1 | PS4</li>
+      </ul>
+    `;
+
+    const result = parseCatalogContent(postContentStr, postTitle);
+
+    expect(result.embedColor).toBe(3447003);
+    expect(result.messageContent).toContain("**Extra Game 1** | PS4");
+    expect(result.messageContent).toContain("**Extra Game 2** | PS5");
+    expect(result.messageContent).toContain("**Premium Classic 1** | PS4");
+    expect(result.messageContent).toContain("🟦 **EXTRA:**");
+    expect(result.messageContent).toContain("🟪 **PREMIUM:**");
+  });
+
+  it("should parse content with only Extra games correctly", () => {
+    const postTitle = "PlayStation Plus Game Catalog";
+    const postContentStr = `
+      <h2>PlayStation Plus Extra and Premium | Game Catalog</h2>
+      <ul>
+        <li>Extra Game 1 | PS4</li>
+      </ul>
+    `;
+
+    const result = parseCatalogContent(postContentStr, postTitle);
+
+    expect(result.messageContent).toContain("**Extra Game 1** | PS4");
+    expect(result.messageContent).toContain("🟦 **EXTRA:**");
+    expect(result.messageContent).not.toContain("🟪 **PREMIUM:**");
+  });
+
+  it("should parse content with only Premium games correctly", () => {
+    const postTitle = "PlayStation Plus Game Catalog";
+    const postContentStr = `
+      <h2>PlayStation Plus Premium</h2>
+      <ul>
+        <li>Premium Classic 1 | PS4</li>
+      </ul>
+    `;
+
+    const result = parseCatalogContent(postContentStr, postTitle);
+
+    expect(result.messageContent).toContain(
+      "> *None detected or formatting changed.*",
+    );
+    expect(result.messageContent).toContain("🟦 **EXTRA:**");
+    expect(result.messageContent).toContain("**Premium Classic 1** | PS4");
+    expect(result.messageContent).toContain("🟪 **PREMIUM:**");
+  });
+
+  it("should parse Premium games using a <p> tag with <strong> correctly", () => {
+    const postTitle = "PlayStation Plus Game Catalog";
+    const postContentStr = `
+      <h2>PlayStation Plus Extra and Premium | Game Catalog</h2>
+      <ul>
+        <li>Extra Game 1 | PS4</li>
+      </ul>
+      <p><strong>PlayStation Plus Premium | Classics</strong></p>
+      <ul>
+        <li>Premium Classic 1 | PS4</li>
+      </ul>
+    `;
+
+    const result = parseCatalogContent(postContentStr, postTitle);
+
+    expect(result.messageContent).toContain("**Extra Game 1** | PS4");
+    expect(result.messageContent).toContain("**Premium Classic 1** | PS4");
+    expect(result.messageContent).toContain("🟪 **PREMIUM:**");
+  });
+
+  it("should parse Premium games using fallback string index correctly", () => {
+    const postTitle = "PlayStation Plus Game Catalog";
+    const postContentStr = `
+      <h2>PlayStation Plus Extra and Premium | Game Catalog</h2>
+      <ul>
+        <li>Extra Game 1 | PS4</li>
+      </ul>
+      <br>
+      PlayStation Plus Premium
+      <br>
+      <ul>
+        <li>Premium Classic 1 | PS4</li>
+      </ul>
+    `;
+
+    // To hit the fallback `indexOf` path, we need it to occur after the PREMIUM_SEARCH_OFFSET (800)
+    // We'll pad the beginning of the content with spaces to reach this offset.
+    const paddedContent = " ".repeat(800) + postContentStr;
+
+    const result = parseCatalogContent(paddedContent, postTitle);
+
+    expect(result.messageContent).toContain("**Extra Game 1** | PS4");
+    expect(result.messageContent).toContain("**Premium Classic 1** | PS4");
+    expect(result.messageContent).toContain("🟪 **PREMIUM:**");
+  });
+
+  it("should format string without games for empty sections correctly", () => {
+    const postTitle = "PlayStation Plus Game Catalog";
+    const postContentStr = "";
+
+    const result = parseCatalogContent(postContentStr, postTitle);
+
+    expect(result.messageContent).toContain(
+      "🟦 **EXTRA:**\n> *None detected or formatting changed.*",
+    );
+    expect(result.messageContent).not.toContain("🟪 **PREMIUM:**");
+  });
+});
