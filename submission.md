@@ -1,12 +1,11 @@
-# 🧪 Add tests for formatDiscordMessage
+🧪 [testing improvement: isolateGameString]
 
-🎯 **What:** The testing gap addressed
-The `formatDiscordMessage` function in `index.js` was previously untested. It is a pure function that maps input objects to a structured payload. This function was exported in `index.js` and tests were added for it in `index.test.js`.
+🎯 **What:** `isolateGameString` in `index.js` was previously missing tests entirely. This function manages text truncations related to dot-spaces and formatting the resulting games string.
 
-📊 **Coverage:** What scenarios are now tested
-- Formatting a Discord message with all provided data.
-- Formatting a Discord message correctly when the `DISCORD_ROLE_ID` environment variable is set.
-- Ensuring that HTML entities in the post title are properly decoded (e.g., `&amp;` to `&`).
+📊 **Coverage:** The new tests in `index.test.js` cover:
+- Strings without a dot-space (left unmodified)
+- Strings truncated correctly at the first dot-space
+- Strings properly trimmed of trailing and wrapping whitespaces, as well as a standalone trailing dot
+- Handling for empty or whitespace-only strings
 
-✨ **Result:** The improvement in test coverage
-The codebase's test suite now covers `formatDiscordMessage` functionality, ensuring accurate generation of the Discord webhook payload. This improves the overall stability of the service and minimizes regressions.
+✨ **Result:** A standalone utility function `isolateGameString` now has proper test coverage to ensure stability and accuracy during refactoring.

@@ -607,4 +607,5 @@ module.exports = {
   loadMemoryState,
   saveMemoryState,
   formatDiscordMessage,
+  isolateGameString,
 };

@@ -13,6 +13,7 @@ const {
   loadMemoryState,
   saveMemoryState,
   formatDiscordMessage,
+  isolateGameString,
 } = require("./index");
 
 describe("isValidWebhookUrl", () => {
@@ -1064,5 +1065,35 @@ describe("formatDiscordMessage", () => {
 
     const payload = formatDiscordMessage(post, parsedContent);
     expect(payload.embeds[0].title).toBe("Game & Watch - New Release");
+  });
+});
+
+describe("isolateGameString", () => {
+  it("should return the string unmodified if there is no dot-space", () => {
+    expect(isolateGameString("The Last of Us Part I | PS5")).toBe(
+      "The Last of Us Part I | PS5",
+    );
+  });
+
+  it("should truncate the string at the first dot-space", () => {
+    expect(
+      isolateGameString(
+        "Horizon Forbidden West | PS4, PS5. Available on Nov 15",
+      ),
+    ).toBe("Horizon Forbidden West | PS4, PS5");
+    expect(isolateGameString("Game Name. Description text.")).toBe("Game Name");
+  });
+
+  it("should trim the string and remove a trailing dot if present", () => {
+    expect(isolateGameString("  God of War Ragnarok  ")).toBe(
+      "God of War Ragnarok",
+    );
+    expect(isolateGameString("Ghost of Tsushima.")).toBe("Ghost of Tsushima");
+    expect(isolateGameString("  Bloodborne.  ")).toBe("Bloodborne");
+  });
+
+  it("should correctly handle an empty string or whitespace only", () => {
+    expect(isolateGameString("")).toBe("");
+    expect(isolateGameString("   ")).toBe("");
   });
 });
