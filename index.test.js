@@ -1296,3 +1296,36 @@ describe("parseCatalogContent", () => {
     expect(result.messageContent).not.toContain("🟪 **PREMIUM:**");
   });
 });
+
+describe("parseEssentialContent", () => {
+  it("should extract games and format them correctly", () => {
+    const { parseEssentialContent } = require("./index.js");
+    const postContentStr =
+      "<ul><li>Game 1 | PS4</li><li>Game 2 | PS5</li></ul>";
+    const postTitle = "PlayStation Plus Monthly Games";
+    const result = parseEssentialContent(postContentStr, postTitle);
+
+    expect(result.embedColor).toBe(16766720);
+    expect(result.messageContent).toContain(
+      "🚨 **New PS Plus Essential Games Announced!**",
+    );
+    expect(result.messageContent).toContain("🟨 **MONTHLY GAMES:**");
+    expect(result.messageContent).toContain("Game 1");
+    expect(result.messageContent).toContain("PS4");
+    expect(result.messageContent).toContain("Game 2");
+    expect(result.messageContent).toContain("PS5");
+    expect(result.tierText).toBe("Click the blog link for full details.");
+  });
+
+  it("should handle empty or malformed content gracefully", () => {
+    const { parseEssentialContent } = require("./index.js");
+    const result = parseEssentialContent("", "Test Title");
+
+    expect(result.embedColor).toBe(16766720);
+    expect(result.messageContent).toContain(
+      "🚨 **New PS Plus Essential Games Announced!**",
+    );
+    expect(result.messageContent).toContain("🟨 **MONTHLY GAMES:**");
+    expect(result.tierText).toBe("Click the blog link for full details.");
+  });
+});
