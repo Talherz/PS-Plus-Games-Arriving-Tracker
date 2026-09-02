@@ -12,6 +12,7 @@ const {
   processBlogContent,
   loadMemoryState,
   saveMemoryState,
+  formatDiscordMessage,
 } = require("./index");
 
 describe("isValidWebhookUrl", () => {
@@ -956,5 +957,112 @@ describe("sendWebhookRequest", () => {
 
     expect(result.res).toBeNull();
     expect(result.error).toBe(abortError);
+  });
+});
+const originalEnv = process.env;
+describe("formatDiscordMessage", () => {
+  beforeEach(() => {
+    // Save original process.env
+    jest.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    // Clean up mock timers
+    jest.useRealTimers();
+  });
+
+  it("should correctly format a Discord message with all provided data", () => {
+    const { formatDiscordMessage } = require("./index");
+    jest.useFakeTimers().setSystemTime(new Date("2023-01-01T00:00:00Z"));
+
+    const post = {
+      title: "PlayStation Plus Monthly Games - January 2023",
+      link: "https://blog.playstation.com/2023/01/01/ps-plus-jan-2023/",
+    };
+
+    const parsedContent = {
+      messageContent: "Here are the new games!",
+      embedColor: 16777215, // White
+      tierText: "Some games...",
+      imageUrl: "https://example.com/image.jpg",
+    };
+
+    const expectedPayload = {
+      username: "Talherz Waifu",
+      content: "Here are the new games!",
+      embeds: [
+        {
+          title: "PlayStation Plus Monthly Games - January 2023",
+          url: "https://blog.playstation.com/2023/01/01/ps-plus-jan-2023/",
+          description: "Some games...",
+          color: 16777215,
+          footer: { text: "Official PlayStation Blog Auto-Parse" },
+          timestamp: "2023-01-01T00:00:00.000Z",
+          image: { url: "https://example.com/image.jpg" },
+        },
+      ],
+      allowed_mentions: { parse: [] },
+    };
+
+    const payload = formatDiscordMessage(post, parsedContent);
+    expect(payload).toEqual(expectedPayload);
+  });
+
+  it("should format correctly when DISCORD_ROLE_ID is set", () => {
+    process.env.DISCORD_ROLE_ID = "123456789";
+    const { formatDiscordMessage } = require("./index");
+    jest.useFakeTimers().setSystemTime(new Date("2023-01-01T00:00:00Z"));
+
+    const post = {
+      title: "PS Plus",
+      link: "https://example.com",
+    };
+
+    const parsedContent = {
+      messageContent: "Hello",
+      embedColor: 0,
+      tierText: "Games",
+      imageUrl: null, // Test without image
+    };
+
+    const expectedPayload = {
+      username: "Talherz Waifu",
+      content: "Hello",
+      embeds: [
+        {
+          title: "PS Plus",
+          url: "https://example.com",
+          description: "Games",
+          color: 0,
+          footer: { text: "Official PlayStation Blog Auto-Parse" },
+          timestamp: "2023-01-01T00:00:00.000Z",
+        },
+      ],
+      allowed_mentions: { roles: ["123456789"] },
+    };
+
+    const payload = formatDiscordMessage(post, parsedContent);
+    expect(payload).toEqual(expectedPayload);
+  });
+
+  it("should decode HTML entities in the title", () => {
+    const { formatDiscordMessage } = require("./index");
+    jest.useFakeTimers().setSystemTime(new Date("2023-01-01T00:00:00Z"));
+
+    const post = {
+      title: "Game &amp; Watch &#8211; New Release",
+      link: "https://example.com",
+    };
+
+    const parsedContent = {
+      messageContent: "Hello",
+      embedColor: 0,
+      tierText: "Games",
+      imageUrl: null,
+    };
+
+    const payload = formatDiscordMessage(post, parsedContent);
+    expect(payload.embeds[0].title).toBe("Game & Watch - New Release");
   });
 });
