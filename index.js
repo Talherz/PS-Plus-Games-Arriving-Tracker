@@ -606,4 +606,5 @@ module.exports = {
   parseRssXml,
   loadMemoryState,
   saveMemoryState,
+  formatDiscordMessage,
 };

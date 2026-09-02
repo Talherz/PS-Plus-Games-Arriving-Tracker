@@ -1,13 +1,12 @@
-# 🧪 Testing Improvement Task
+# 🧪 Add tests for formatDiscordMessage
 
-## 🎯 What
-The `sendWebhookRequest` function was missing test coverage for its error handling and timeout behaviors using the AbortController.
+🎯 **What:** The testing gap addressed
+The `formatDiscordMessage` function in `index.js` was previously untested. It is a pure function that maps input objects to a structured payload. This function was exported in `index.js` and tests were added for it in `index.test.js`.
 
-## 📊 Coverage
-The new tests cover the following scenarios for `sendWebhookRequest`:
-1. Successfully sending a webhook request and returning a null error.
-2. Handling fetch errors properly and returning the thrown error.
-3. Aborting the request appropriately when the fetch exceeds the 10000ms timeout, using `jest.useFakeTimers()` to simulate the passage of time without actually waiting.
+📊 **Coverage:** What scenarios are now tested
+- Formatting a Discord message with all provided data.
+- Formatting a Discord message correctly when the `DISCORD_ROLE_ID` environment variable is set.
+- Ensuring that HTML entities in the post title are properly decoded (e.g., `&amp;` to `&`).
 
-## ✨ Result
-Test coverage for network interactions and time-sensitive operations in the webhook sending logic has been improved and can now effectively catch issues related to error handling and timeouts in `sendWebhookRequest`.
+✨ **Result:** The improvement in test coverage
+The codebase's test suite now covers `formatDiscordMessage` functionality, ensuring accurate generation of the Discord webhook payload. This improves the overall stability of the service and minimizes regressions.
