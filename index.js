@@ -610,4 +610,5 @@ module.exports = {
   formatDiscordMessage,
   isolateGameString,
   parseCatalogContent,
+  parseEssentialContent,
 };
