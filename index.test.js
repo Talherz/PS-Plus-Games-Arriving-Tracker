@@ -10,6 +10,7 @@ const {
   isValidWebhookUrl,
   checkOfficialPSPlusFeed,
   processBlogContent,
+  parseBlogContent,
   loadMemoryState,
   saveMemoryState,
   formatDiscordMessage,
@@ -1095,5 +1096,82 @@ describe("isolateGameString", () => {
   it("should correctly handle an empty string or whitespace only", () => {
     expect(isolateGameString("")).toBe("");
     expect(isolateGameString("   ")).toBe("");
+  });
+});
+
+describe("parseBlogContent", () => {
+  it("should parse Catalog content and extract an image URL", () => {
+    const post = {
+      title: "PlayStation Plus Game Catalog",
+      content: `
+        <p>PlayStation Plus Extra and Premium | Game Catalog</p>
+        <ul><li><strong>Game 1</strong> | PS4</li></ul>
+        <img src="https://example.com/image.jpg" />
+      `,
+    };
+
+    const result = parseBlogContent(post, "Catalog");
+
+    expect(result.embedColor).toBe(3447003); // Catalog color
+    expect(result.messageContent).toContain("**Game 1** | PS4");
+    expect(result.imageUrl).toBe("https://example.com/image.jpg");
+  });
+
+  it("should parse Essential content and extract an image URL", () => {
+    const post = {
+      title: "PlayStation Plus Essential Games",
+      content: `
+        <ul><li><strong>Game 2</strong> | PS5</li></ul>
+        <img src="https://example.com/image2.png" />
+      `,
+    };
+
+    const result = parseBlogContent(post, "Essential");
+
+    expect(result.embedColor).toBe(16766720); // Essential color
+    expect(result.messageContent).toContain("**Game 2** | PS5");
+    expect(result.imageUrl).toBe("https://example.com/image2.png");
+  });
+
+  it("should handle content without an image URL gracefully", () => {
+    const post = {
+      title: "PlayStation Plus Essential Games",
+      content: `
+        <ul><li><strong>Game 3</strong> | PS4</li></ul>
+        <p>No image here.</p>
+      `,
+    };
+
+    const result = parseBlogContent(post, "Essential");
+
+    expect(result.imageUrl).toBe("");
+  });
+
+  it("should only extract specific image types (jpg, png, jpeg, webp)", () => {
+    const post = {
+      title: "PlayStation Plus Game Catalog",
+      content: `
+        <img src="https://example.com/image.gif" />
+        <img src="https://example.com/image.webp" />
+      `,
+    };
+
+    const result = parseBlogContent(post, "Catalog");
+
+    expect(result.imageUrl).toBe("https://example.com/image.webp");
+  });
+
+  it("should ignore invalid image URLs", () => {
+    const post = {
+      title: "PlayStation Plus Game Catalog",
+      content: `
+        <img src="http://example.com/image.jpg" />
+        <img src="/local/image.jpg" />
+      `,
+    };
+
+    const result = parseBlogContent(post, "Catalog");
+
+    expect(result.imageUrl).toBe("");
   });
 });

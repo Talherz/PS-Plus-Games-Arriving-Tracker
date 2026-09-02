@@ -1,11 +1,15 @@
-🧪 [testing improvement: isolateGameString]
+🧪 [testing improvement] Add tests for parseBlogContent
 
-🎯 **What:** `isolateGameString` in `index.js` was previously missing tests entirely. This function manages text truncations related to dot-spaces and formatting the resulting games string.
+🎯 **What:**
+The `parseBlogContent` function was entirely missing test coverage in `index.js`. This function processes blog post objects based on their `type` ("Catalog" or "Essential"), formats the text via delegated parser functions, and extracts an image URL from the `src` attribute.
 
-📊 **Coverage:** The new tests in `index.test.js` cover:
-- Strings without a dot-space (left unmodified)
-- Strings truncated correctly at the first dot-space
-- Strings properly trimmed of trailing and wrapping whitespaces, as well as a standalone trailing dot
-- Handling for empty or whitespace-only strings
+📊 **Coverage:**
+A new test suite (`describe("parseBlogContent", ...`) was added to `index.test.js`. The suite fully exercises `parseBlogContent`:
+- Ensures "Catalog" posts call the correct underlying logic and extracts `imageUrl` correctly.
+- Ensures "Essential" posts call the correct underlying logic and extracts `imageUrl` correctly.
+- Asserts that it correctly handles input without an image, safely returning an empty string.
+- Confirms it successfully limits image extraction to supported types (jpg, png, jpeg, webp) and correctly skips things like .gif.
+- Tests invalid URLs being skipped gracefully.
 
-✨ **Result:** A standalone utility function `isolateGameString` now has proper test coverage to ensure stability and accuracy during refactoring.
+✨ **Result:**
+Test coverage and codebase reliability has successfully been increased for the main execution pipeline functions!
