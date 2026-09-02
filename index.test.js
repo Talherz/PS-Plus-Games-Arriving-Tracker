@@ -10,6 +10,7 @@ const {
   isValidWebhookUrl,
   checkOfficialPSPlusFeed,
   processBlogContent,
+  fetchPlayStationBlogFeed,
   parseBlogContent,
   loadMemoryState,
   saveMemoryState,
@@ -329,6 +330,56 @@ describe("saveMemoryState", () => {
 
     expect(fsPromises.writeFile).toHaveBeenCalled();
     expect(fsPromises.rename).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchPlayStationBlogFeed", () => {
+  let originalFetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    jest.useFakeTimers();
+    jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it("should return { itemList: [], newEtag: etag } and clear timeout on 304 response", async () => {
+    const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
+    global.fetch = jest.fn().mockResolvedValue({
+      status: 304,
+      ok: true,
+    });
+    const etag = "test-etag";
+    const resultPromise = fetchPlayStationBlogFeed(etag);
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+    expect(result).toEqual({ itemList: [], newEtag: etag });
+    expect(console.log).toHaveBeenCalledWith(
+      "No new updates (304 Not Modified).",
+    );
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+  });
+
+  it("should return null and clear timeout on non-200 response", async () => {
+    const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
+    global.fetch = jest.fn().mockResolvedValue({
+      status: 500,
+      ok: false,
+    });
+    const resultPromise = fetchPlayStationBlogFeed();
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+    expect(result).toBeNull();
+    expect(console.error).toHaveBeenCalledWith(
+      "Aborting: PS Blog returned error 500",
+    );
+    expect(clearTimeoutSpy).toHaveBeenCalled();
   });
 });
 
