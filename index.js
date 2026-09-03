@@ -351,8 +351,8 @@ function formatListText(gameArray) {
   for (let i = 0; i < gameArray.length; i++) {
     let gameStr = gameArray[i];
     // Split the game string if it contains a pipe to separate the title from the console tags
-    if (gameStr.includes("|")) {
-      let splitIndex = gameStr.indexOf("|");
+    let splitIndex = gameStr.indexOf("|");
+    if (splitIndex !== -1) {
       let title = gameStr.substring(0, splitIndex).trim();
       let consoles = gameStr.substring(splitIndex).trim();
       formattedLines.push(`${i + 1}. **${title}** ${consoles}`);
