@@ -9,6 +9,7 @@ const PREMIUM_SEARCH_OFFSET = 800;
 const STRONG_REGEX = /<strong[^>]*>([\s\S]*?)<\/strong>/gi;
 const PREMIUM_REGEX = /Premium/i;
 const LI_TAG_REGEX = /<li>(.*?)<\/li>/g;
+const LAST_CHANCE_REGEX = /last chance/i;
 const BLOCK_TAGS_REGEX = /<\/?(p|br|li|h[1-6]|div)[^>]*>/gi;
 const HTML_TAGS_REGEX = /<[^>]*>?/gm;
 
@@ -316,7 +317,7 @@ function extractGameList(htmlBlock, fallbackTitle = "") {
       if (
         gameString.length > 2 &&
         gameString.length < 80 &&
-        !String(gameString).toLowerCase().includes("last chance")
+        !LAST_CHANCE_REGEX.test(gameString)
       ) {
         extractedGames.add(gameString);
       }
