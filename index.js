@@ -372,14 +372,25 @@ function parseCatalogContent(postContentStr, postTitle) {
   let blocks = [safeHtml];
   let splitIndex = -1;
 
-  const headingRegex = /<(h[1-4]|p)[^>]*>([\s\S]*?)<\/\1>/gi;
-  let match;
+  const openTagRegex = /<(h[1-4]|p)(?:\s[^>]*)?>/gi;
+  let openMatch;
   let headerMatchIndex = -1;
   let paragraphMatchIndex = -1;
 
-  while ((match = headingRegex.exec(safeHtml)) !== null) {
-    const tagName = match[1].toLowerCase();
-    const innerHtml = match[2];
+  while ((openMatch = openTagRegex.exec(safeHtml)) !== null) {
+    const tagName = openMatch[1].toLowerCase();
+    const closingTag = `</${tagName}>`;
+    const startIdx = openMatch.index + openMatch[0].length;
+    const endIdx = safeHtml.toLowerCase().indexOf(closingTag, startIdx);
+
+    if (endIdx === -1) continue; // Unclosed tag, skip
+
+    const innerHtml = safeHtml.substring(startIdx, endIdx);
+    // Update lastIndex to prevent overlapping matches and ensure progress
+    openTagRegex.lastIndex = endIdx + closingTag.length;
+
+    // Use openMatch.index for splitting to include the opening tag
+    const matchIndex = openMatch.index;
 
     if (!PREMIUM_REGEX.test(innerHtml)) continue;
 
@@ -388,7 +399,7 @@ function parseCatalogContent(postContentStr, postTitle) {
     if (PREMIUM_REGEX.test(textContent)) {
       if (tagName.startsWith("h")) {
         // If we found a header, record it and break immediately
-        headerMatchIndex = match.index;
+        headerMatchIndex = matchIndex;
         break;
       } else if (tagName === "p" && paragraphMatchIndex === -1) {
         // Check if Premium is in a strong tag, and only record the first occurrence
@@ -403,7 +414,7 @@ function parseCatalogContent(postContentStr, postTitle) {
           }
         }
         if (found) {
-          paragraphMatchIndex = match.index;
+          paragraphMatchIndex = matchIndex;
         }
       }
     }
