@@ -75,6 +75,7 @@ function parseRssXml(xmlData) {
   const parser = new XMLParser({
     ignoreAttributes: false,
     textNodeName: "text",
+    ignorePiTags: true,
   });
 
   const xmlDoc = parser.parse(xmlData);

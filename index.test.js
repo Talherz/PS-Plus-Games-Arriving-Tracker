@@ -847,6 +847,15 @@ describe("parseRssXml", () => {
     expect(result[1].title).toBe("Test Game 2");
   });
 
+  it("should ignore processing instruction (PI) tags for security", () => {
+    const xmlData = `<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type="text/xsl" href="style.xsl"?><rss version="2.0"><channel><item><title>Test Game</title><link>https://example.com</link></item></channel></rss>`;
+    const result = parseRssXml(xmlData);
+
+    // The parser should successfully parse the items and ignore the PI tag
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0].title).toBe("Test Game");
+  });
+
   it("should return null and log an error for invalid XML input", () => {
     const xmlData = `<?xml version="1.0" encoding="UTF-8"?><notrss></notrss>`;
     const result = parseRssXml(xmlData);
