@@ -283,7 +283,7 @@ function decodeHtmlEntities(text) {
 }
 
 function isolateGameString(rawLine) {
-  const matchIdx = rawLine.search(/\.\s/);
+  const matchIdx = rawLine.indexOf(". ");
   let splitLine = (
     matchIdx !== -1 ? rawLine.slice(0, matchIdx) : rawLine
   ).trim();
