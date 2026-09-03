@@ -72,14 +72,15 @@ async function readStream(response, maxSize, timeoutId) {
   }
 }
 
-function parseRssXml(xmlData) {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    textNodeName: "text",
-    ignorePiTags: true,
-  });
+const sharedXmlParser = new XMLParser({
+  ignoreAttributes: false,
+  textNodeName: "text",
+  ignorePiTags: true,
+});
 
-  const xmlDoc = parser.parse(xmlData);
+function parseRssXml(xmlData) {
+  const xmlDoc = sharedXmlParser.parse(xmlData);
+
   const items = xmlDoc?.rss?.channel?.item;
 
   if (!items) {
