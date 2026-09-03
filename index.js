@@ -615,4 +615,6 @@ module.exports = {
   isolateGameString,
   parseCatalogContent,
   parseEssentialContent,
+  executeWebhookWithRetry,
+  sleep,
 };

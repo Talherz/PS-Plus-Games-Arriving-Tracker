@@ -1389,3 +1389,170 @@ describe("parseEssentialContent", () => {
     expect(result.tierText).toBe("Click the blog link for full details.");
   });
 });
+
+const { executeWebhookWithRetry, sleep } = require("./index");
+
+describe("executeWebhookWithRetry", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+    global.fetch = jest.fn();
+    jest.useFakeTimers();
+    jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it("should return true on immediate success", async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+
+    const promise = executeWebhookWithRetry({ content: "test" }, "Test Title");
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(console.log).toHaveBeenCalledWith(
+      "✅ SUCCESS! Discord accepted the message.",
+    );
+  });
+
+  it("should retry on network error and succeed on second attempt", async () => {
+    global.fetch
+      .mockRejectedValueOnce(new Error("Network Error"))
+      .mockResolvedValueOnce({ ok: true });
+
+    const promise = executeWebhookWithRetry({ content: "test" }, "Test Title");
+
+    // First attempt fails, wait for sleep(2000)
+    await jest.advanceTimersByTimeAsync(2000);
+    // Second attempt succeeds
+    await jest.runAllTimersAsync();
+
+    const result = await promise;
+
+    expect(result).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Discord webhook fetch error (attempt 1/3)"),
+    );
+  });
+
+  it("should retry on AbortError and succeed on third attempt", async () => {
+    const abortError = new Error("AbortError");
+    abortError.name = "AbortError";
+
+    global.fetch
+      .mockRejectedValueOnce(abortError)
+      .mockRejectedValueOnce(abortError)
+      .mockResolvedValueOnce({ ok: true });
+
+    const promise = executeWebhookWithRetry({ content: "test" }, "Test Title");
+
+    await jest.advanceTimersByTimeAsync(2000); // Wait after 1st attempt
+    await jest.advanceTimersByTimeAsync(2000); // Wait after 2nd attempt
+    await jest.runAllTimersAsync();
+
+    const result = await promise;
+
+    expect(result).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Discord webhook fetch timed out (attempt 1/3)"),
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Discord webhook fetch timed out (attempt 2/3)"),
+    );
+  });
+
+  it("should return false after 3 failed network attempts", async () => {
+    global.fetch.mockRejectedValue(new Error("Network Error"));
+
+    const promise = executeWebhookWithRetry({ content: "test" }, "Test Title");
+
+    await jest.advanceTimersByTimeAsync(2000); // Wait after 1st attempt
+    await jest.advanceTimersByTimeAsync(2000); // Wait after 2nd attempt
+    await jest.runAllTimersAsync();
+
+    const result = await promise;
+
+    expect(result).toBe(false);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("should retry on 429 Rate Limit and succeed", async () => {
+    const rateLimitResponse = {
+      ok: false,
+      status: 429,
+      headers: new Headers({ "Retry-After": "3" }),
+      text: jest.fn().mockResolvedValue("Rate Limited"),
+    };
+
+    global.fetch
+      .mockResolvedValueOnce(rateLimitResponse)
+      .mockResolvedValueOnce({ ok: true });
+
+    const promise = executeWebhookWithRetry({ content: "test" }, "Test Title");
+
+    // First attempt fails with 429, wait for sleep(3000)
+    await jest.advanceTimersByTimeAsync(3000);
+    await jest.runAllTimersAsync();
+
+    const result = await promise;
+
+    expect(result).toBe(true);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Rate limited. Retry after 3s"),
+    );
+  });
+
+  it("should abort if Rate Limit retry-after is > 250s", async () => {
+    const rateLimitResponse = {
+      ok: false,
+      status: 429,
+      headers: new Headers({ "Retry-After": "300" }),
+      text: jest.fn().mockResolvedValue("Rate Limited"),
+    };
+
+    global.fetch.mockResolvedValueOnce(rateLimitResponse);
+
+    const promise = executeWebhookWithRetry({ content: "test" }, "Test Title");
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result).toBe(false);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("Discord rate limit is too long (300s)"),
+    );
+  });
+
+  it("should return false on non-retriable error (e.g., 400 Bad Request)", async () => {
+    const badRequestResponse = {
+      ok: false,
+      status: 400,
+      text: jest.fn().mockResolvedValue("Bad Request"),
+    };
+
+    global.fetch.mockResolvedValueOnce(badRequestResponse);
+
+    const promise = executeWebhookWithRetry({ content: "test" }, "Test Title");
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result).toBe(false);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("DISCORD REJECTED IT! Error code: 400"),
+    );
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining("Reason: Bad Request"),
+    );
+  });
+});
